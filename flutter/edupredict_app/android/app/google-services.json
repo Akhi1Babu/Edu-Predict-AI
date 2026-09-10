@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "191285263596",
+    "project_id": "edu-predict-ai",
+    "storage_bucket": "edu-predict-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:191285263596:android:dbc607891869c8d72d79c9",
+        "android_client_info": {
+          "package_name": "com.example.edupredict_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMzWiIxO_-AS8r70p1MtsEsluvYjVY2n0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
