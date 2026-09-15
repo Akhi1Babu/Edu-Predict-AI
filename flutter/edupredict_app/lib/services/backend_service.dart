@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 class BackendService {
-  // ValueNotifier to allow UI to react to changes, default to host computer's local Wi-Fi IP
-  static final ValueNotifier<String> backendUrl = ValueNotifier<String>("http://192.168.137.1:8000");
+  // ValueNotifier to allow UI to react to changes, default to live 24/7 Render Cloud URL
+  static final ValueNotifier<String> backendUrl = ValueNotifier<String>("https://edu-predict-ai-oo6l.onrender.com");
 
   static String get url => backendUrl.value;
 
