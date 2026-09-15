@@ -335,7 +335,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                       Text(
                                         sScore != null ? '$sScore%' : '--',
                                         style: TextStyle(
-                                          fontWeight: FontWeight.extrabold,
+                                          fontWeight: FontWeight.w800,
                                           fontSize: 13,
                                           color: isCurrent
                                               ? ((sScore as num?) ?? 100) < 70
@@ -374,7 +374,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                         style: const TextStyle(
                                           color: Color(0xFF154486),
                                           fontSize: 16,
-                                          fontWeight: FontWeight.extrabold,
+                                          fontWeight: FontWeight.w800,
                                         ),
                                       ),
                                     ),
