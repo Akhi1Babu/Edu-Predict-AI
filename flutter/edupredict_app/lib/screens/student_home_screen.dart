@@ -31,7 +31,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   double _hoursStudied = 15;
   double _sleepHours = 7;
-  double _attendance = 85;
   double _previousScore = 75;
   int _motivationLevel = 2; // 0=Low, 1=Med, 2=High
   int _extracurriculars = 1; // 0=No, 1=Yes
@@ -70,7 +69,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       setState(() {
         _hoursStudied = (subjInputs['Hours_Studied'] ?? 15.0).toDouble();
         _sleepHours = (subjInputs['Sleep_Hours'] ?? 7.0).toDouble();
-        _attendance = (subjInputs['Attendance'] ?? 85.0).toDouble();
         _previousScore = (subjInputs['Previous_Scores_Semester_Wise'] ?? 75.0).toDouble();
         _motivationLevel = subjInputs['Motivation_Level'] ?? 2;
         _teacherQuality = subjInputs['Teacher_Quality'] ?? 2;
@@ -92,7 +90,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       final studentInputs = {
         'Hours_Studied': _hoursStudied,
         'Sleep_Hours': _sleepHours,
-        'Attendance': _attendance,
         'Previous_Scores_Semester_Wise': _previousScore,
         'Previous_Scores': _previousScore,
         'Motivation_Level': _motivationLevel,
@@ -401,19 +398,6 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                   keyboardType: TextInputType.number,
                                   validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
                                   onSaved: (val) => _hoursStudied = double.parse(val!),
-                                ),
-                                const SizedBox(height: 16),
-                                TextFormField(
-                                  key: ValueKey('att_$_selectedSubject'),
-                                  initialValue: _attendance.toString(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Attendance % ($_selectedSubject)',
-                                    prefixIcon: const Icon(Icons.fact_check),
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid percentage' : null,
-                                  onSaved: (val) => _attendance = double.parse(val!),
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
