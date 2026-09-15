@@ -227,9 +227,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       children: const [
                         Icon(Icons.auto_stories, color: Color(0xFF1E3C72)),
                         SizedBox(width: 8),
-                        Text(
-                          'Upload University Guidelines (RAG)',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3C72)),
+                        Expanded(
+                          child: Text(
+                            'Upload University Guidelines (RAG)',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3C72)),
+                          ),
                         ),
                       ],
                     ),
