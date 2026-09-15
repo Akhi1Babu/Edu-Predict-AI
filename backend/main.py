@@ -46,13 +46,22 @@ except Exception as e:
 # Initialize Firebase Admin SDK
 db = None
 SERVICE_KEY_PATH = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
+FIREBASE_ENV_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
 
-if FIREBASE_AVAILABLE and os.path.exists(SERVICE_KEY_PATH):
+if FIREBASE_AVAILABLE:
     try:
-        cred = credentials.Certificate(SERVICE_KEY_PATH)
-        firebase_admin.initialize_app(cred)
-        db = firestore.client()
-        print("Firebase Admin initialized successfully.")
+        if FIREBASE_ENV_JSON:
+            import json
+            cred_dict = json.loads(FIREBASE_ENV_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print("Firebase Admin initialized from ENV JSON successfully.")
+        elif os.path.exists(SERVICE_KEY_PATH):
+            cred = credentials.Certificate(SERVICE_KEY_PATH)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            print("Firebase Admin initialized from local file successfully.")
     except Exception as e:
         print(f"Error initializing Firebase Admin: {e}")
 
