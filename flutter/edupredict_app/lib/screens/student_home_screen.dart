@@ -638,50 +638,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                         const SizedBox(height: 16),
 
-                        // RAG Recommendations Container Card
-                        if (recommendations.isNotEmpty) ...[
-                          Card(
-                            elevation: 6,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            color: const Color(0xFFF0F5FF),
-                            child: Padding(
-                              padding: const EdgeInsets.all(18.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.tips_and_updates, color: Color(0xFF1D61E7)),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'AI Recommendations (Curriculum RAG)',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF154486)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  ...recommendations.map(
-                                    (rec) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 6),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D61E7))),
-                                          Expanded(
-                                            child: Text(rec, style: const TextStyle(fontSize: 13, color: Colors.black87)),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                        ],
+
 
                         // Quote Footer
                         Center(
