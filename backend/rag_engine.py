@@ -7,18 +7,21 @@ from sklearn.metrics.pairwise import cosine_similarity
 DEFAULT_SUBJECT_GUIDELINES = {
     "Data Structures & Algorithms": """
     If predicted score is below 70%, prioritize core Data Structures: Arrays, Linked Lists, Stacks, Queues, and Trees.
-    Complete weekly algorithmic practice exercises focusing on Searching & Sorting algorithms.
-    Focus revision on high-yield exam topics: Binary Search Trees, Graph Traversals (BFS/DFS), and Dynamic Programming.
+    If predicted score is 70% or above, advance your skills with complex topics: Graph Traversals (BFS/DFS), Dynamic Programming, and Trie data structures.
+    Complete weekly algorithmic practice exercises focusing on Searching & Sorting algorithms and time complexity.
+    Solve previous exam questions and practice competitive coding problems regularly.
     """,
     "Artificial Intelligence": """
-    If predicted score is below 70%, review foundational Linear Algebra, Probability, and Machine Learning algorithms.
+    If predicted score is below 70%, review foundational Linear Algebra, Probability, and basic Machine Learning algorithms.
+    If predicted score is 70% or above, explore advanced AI topics: Neural Network Backpropagation, Convolutional Architectures, and Reinforcement Learning.
     Complete hands-on lab exercises in Python covering Supervised Learning classification & regression models.
-    Focus revision on core exam topics: Neural Network Backpropagation, Decision Trees, Random Forests, and Search Algorithms.
+    Focus revision on core exam topics: Decision Trees, Random Forests, and Search Algorithms (A* & Heuristics).
     """,
     "Cloud Computing": """
     If predicted score is below 70%, focus on Cloud Fundamentals: Virtualization, IaaS/PaaS/SaaS service models, and Storage paradigms.
+    If predicted score is 70% or above, deep-dive into advanced Cloud Architecture: Microservices, Distributed Systems, and Serverless computing.
     Complete practical hands-on tutorials on AWS/GCP/Azure involving EC2 instances, Virtual Private Clouds (VPC), and IAM security policies.
-    Focus revision on key exam topics: Docker containerization, Kubernetes cluster orchestration, and Serverless computing.
+    Focus revision on key exam topics: Docker containerization, Kubernetes cluster orchestration, and Cloud Security.
     """
 }
 
@@ -104,7 +107,7 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
     RAG Retriever: Uses TF-IDF & Cosine Similarity to find top curriculum recommendations.
-    Returns clean recommendation strings without prefixes or bullet artifacts.
+    Filters out conditional recommendations that do not match the student's current performance metrics.
     """
     initialize_rag()
     norm_subj = _normalize_subject(subject)
@@ -123,16 +126,45 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     if not cleaned_chunks:
         return []
 
-    if len(cleaned_chunks) <= top_k:
-        return cleaned_chunks[:top_k]
-
     attendance = student_data.get("Attendance", 85.0)
     hours = student_data.get("Hours_Studied", 15.0)
     prev_score = student_data.get("Previous_Scores_Semester_Wise", 75.0)
 
+    # Filter chunks based on student data metrics
+    eligible_chunks = []
+    for c in cleaned_chunks:
+        c_lower = c.lower()
+        
+        # Low score condition (<70%) -> skip if student is scoring >= 70
+        if ("below 70%" in c_lower or "score < 70" in c_lower or "scoring below 70" in c_lower) and predicted_score >= 70:
+            continue
+            
+        # High score condition (>=70%) -> skip if student is scoring < 70
+        if ("70% or above" in c_lower or "score >= 70" in c_lower or "scoring above 70" in c_lower) and predicted_score < 70:
+            continue
+
+        # Low attendance condition (<80%) -> skip if attendance is good (>=80)
+        if ("attendance below" in c_lower or "attendance < 80" in c_lower or "missed lab" in c_lower) and attendance >= 80:
+            continue
+
+        # Low study hours condition (<15) -> skip if study hours are sufficient (>=15)
+        if ("hours < 15" in c_lower or "study hours below" in c_lower) and hours >= 15:
+            continue
+
+        eligible_chunks.append(c)
+
+    if not eligible_chunks:
+        eligible_chunks = cleaned_chunks
+
+    if len(eligible_chunks) <= top_k:
+        return eligible_chunks[:top_k]
+
     query_keywords = [norm_subj]
     if predicted_score < 70:
-        query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "failing", "core", "fundamentals"])
+        query_keywords.extend(["below 70%", "score low", "remedial", "failing", "core", "fundamentals"])
+    else:
+        query_keywords.extend(["70% or above", "advanced", "mastery", "complex", "high performance"])
+
     if attendance < 80:
         query_keywords.extend(["attendance", "missed lab", "remedial tutorial", "lectures"])
     if hours < 15:
@@ -143,8 +175,8 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     query_str = " ".join(query_keywords)
 
     try:
-        vectorizer = TfidfVectorizer().fit(cleaned_chunks + [query_str])
-        chunk_vectors = vectorizer.transform(cleaned_chunks)
+        vectorizer = TfidfVectorizer().fit(eligible_chunks + [query_str])
+        chunk_vectors = vectorizer.transform(eligible_chunks)
         query_vector = vectorizer.transform([query_str])
 
         similarities = cosine_similarity(query_vector, chunk_vectors).flatten()
@@ -152,15 +184,16 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
 
         results = []
         for idx in top_indices:
-            if cleaned_chunks[idx] not in results:
-                results.append(cleaned_chunks[idx])
+            if eligible_chunks[idx] not in results:
+                results.append(eligible_chunks[idx])
 
-        return results if results else cleaned_chunks[:top_k]
+        return results if results else eligible_chunks[:top_k]
     except Exception as e:
         print(f"RAG retrieval error: {e}")
-        return cleaned_chunks[:top_k]
+        return eligible_chunks[:top_k]
 
 
 # Initialize default guidelines on module import
 initialize_rag()
+
 
