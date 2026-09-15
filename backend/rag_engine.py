@@ -28,26 +28,26 @@ _CUSTOM_SUBJECTS = set()
 
 
 def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
-    """Splits document text into clean semantic recommendation chunks."""
-    sentences = re.split(r'(?<=[.!?\n]) +', text.strip())
+    """Splits document text into clean, individual recommendation sentences."""
+    raw_lines = re.split(r'[\r\n]+', text.strip())
     chunks = []
-    current_chunk = ""
 
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
+    for line in raw_lines:
+        line = line.strip()
+        if not line:
             continue
-        if len(current_chunk) + len(sentence) <= chunk_size:
-            current_chunk += " " + sentence if current_chunk else sentence
-        else:
-            if current_chunk:
-                chunks.append(current_chunk)
-            current_chunk = sentence
+        line = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', line).strip()
+        if not line:
+            continue
 
-    if current_chunk:
-        chunks.append(current_chunk)
+        sentences = re.split(r'(?<=[.!?]) +', line)
+        for s in sentences:
+            s = s.strip()
+            s = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', s).strip()
+            if s and len(s) > 5:
+                chunks.append(s)
 
-    return chunks if chunks else [text]
+    return chunks if chunks else [text.strip()]
 
 
 def initialize_rag():
@@ -72,6 +72,7 @@ def index_document_text(subject: str, text: str, append: bool = False):
 def parse_pdf_bytes(pdf_bytes: bytes) -> str:
     """Extracts plain text from uploaded PDF bytes using pypdf."""
     try:
+        # pyrefly: ignore [missing-import]
         import pypdf
         reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
         extracted_text = []
@@ -88,7 +89,7 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
     RAG Retriever: Uses TF-IDF & Cosine Similarity to find top curriculum recommendations.
-    Returns clean recommendation strings without prefixes.
+    Returns clean recommendation strings without prefixes or bullet artifacts.
     """
     initialize_rag()
     chunks = _SUBJECT_CHUNKS.get(subject, [])
@@ -97,39 +98,37 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     if not chunks:
         return []
 
-    # Helper to clean up any unwanted prefixes
     def clean_text(c: str) -> str:
-        return c.replace("🎓 UNIVERSITY GUIDELINE:", "").replace("🎓", "").replace("DSA FOCUS:", "").replace("AI FOCUS:", "").replace("CLOUD FOCUS:", "").strip()
+        text = c.replace("🎓 UNIVERSITY GUIDELINE:", "").replace("🎓", "").replace("DSA FOCUS:", "").replace("AI FOCUS:", "").replace("CLOUD FOCUS:", "").strip()
+        text = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', text).strip()
+        return text
 
-    # If teacher uploaded custom guidelines for this subject, return the teacher's guidelines directly
-    if subject in _CUSTOM_SUBJECTS or len(chunks) <= top_k:
-        results = []
-        for c in chunks[:top_k]:
-            clean_chunk = clean_text(c)
-            if clean_chunk:
-                results.append(clean_chunk)
-        return results
+    cleaned_chunks = [clean_text(c) for c in chunks if clean_text(c)]
+    if not cleaned_chunks:
+        return []
 
-    # Fallback to TF-IDF retrieval for multi-chunk documents
+    if len(cleaned_chunks) <= top_k:
+        return cleaned_chunks[:top_k]
+
     attendance = student_data.get("Attendance", 85.0)
     hours = student_data.get("Hours_Studied", 15.0)
     prev_score = student_data.get("Previous_Scores_Semester_Wise", 75.0)
 
     query_keywords = [subject]
     if predicted_score < 70:
-        query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "failing"])
+        query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "failing", "core", "fundamentals"])
     if attendance < 80:
-        query_keywords.extend(["attendance", "missed lab", "remedial tutorial"])
+        query_keywords.extend(["attendance", "missed lab", "remedial tutorial", "lectures"])
     if hours < 15:
-        query_keywords.extend(["low study hours", "practice", "exercise"])
+        query_keywords.extend(["low study hours", "practice", "exercise", "daily"])
     if prev_score < 70:
-        query_keywords.extend(["fundamentals", "revision"])
+        query_keywords.extend(["fundamentals", "revision", "basic"])
 
     query_str = " ".join(query_keywords)
 
     try:
-        vectorizer = TfidfVectorizer().fit(chunks + [query_str])
-        chunk_vectors = vectorizer.transform(chunks)
+        vectorizer = TfidfVectorizer().fit(cleaned_chunks + [query_str])
+        chunk_vectors = vectorizer.transform(cleaned_chunks)
         query_vector = vectorizer.transform([query_str])
 
         similarities = cosine_similarity(query_vector, chunk_vectors).flatten()
@@ -137,15 +136,15 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
 
         results = []
         for idx in top_indices:
-            clean_chunk = clean_text(chunks[idx])
-            if clean_chunk:
-                results.append(clean_chunk)
+            if cleaned_chunks[idx] not in results:
+                results.append(cleaned_chunks[idx])
 
-        return results if results else [clean_text(c) for c in chunks[:top_k]]
+        return results if results else cleaned_chunks[:top_k]
     except Exception as e:
         print(f"RAG retrieval error: {e}")
-        return [clean_text(c) for c in chunks[:top_k]]
+        return cleaned_chunks[:top_k]
 
 
 # Initialize default guidelines on module import
 initialize_rag()
+
