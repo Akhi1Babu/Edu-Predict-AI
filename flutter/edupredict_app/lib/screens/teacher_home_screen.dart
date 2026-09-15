@@ -16,6 +16,7 @@ class TeacherHomeScreen extends StatefulWidget {
 
 class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   final _firestore = FirebaseFirestore.instance;
+
   final List<String> _subjects = [
     "Data Structures & Algorithms",
     "Artificial Intelligence",
@@ -23,23 +24,24 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   ];
 
   void _showAcademicFormDialog(BuildContext context, String studentId, Map<String, dynamic>? existingDocData) {
-    final formKey = GlobalKey<FormState>();
     String selectedSubject = "Data Structures & Algorithms";
 
-    Map<String, dynamic> subjectRecords = existingDocData?['subjectRecords'] as Map<String, dynamic>? ?? {};
-    Map<String, dynamic>? existingTeacherData = (subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?) ??
+    final subjectRecords = (existingDocData?['subjectRecords'] as Map<String, dynamic>?) ?? {};
+    final tInputs = (subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?) ??
         (existingDocData?['teacherInputs'] as Map<String, dynamic>?);
 
-    double attendance = (existingTeacherData?['Attendance'] ?? 85.0).toDouble();
-    double previousScore = (existingTeacherData?['Previous_Scores_Semester_Wise'] ?? 75.0).toDouble();
-    double participation = (existingTeacherData?['Class_Participation_Score'] ?? 8.0).toDouble();
-    int tutoringSessions = existingTeacherData?['Tutoring_Sessions'] ?? 1;
+    double attendance = (tInputs?['Attendance'] ?? 85.0).toDouble();
+    double previousScore = (tInputs?['Previous_Scores_Semester_Wise'] ?? 75.0).toDouble();
+    double participation = (tInputs?['Class_Participation_Score'] ?? 8.0).toDouble();
+    int tutoringSessions = tInputs?['Tutoring_Sessions'] ?? 1;
+
+    final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -47,7 +49,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-                top: 20,
+                top: 24,
                 left: 20,
                 right: 20,
               ),
@@ -58,18 +60,23 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Update Student Academic Record',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3C72)),
+                      Row(
+                        children: const [
+                          Icon(Icons.edit_note, color: Color(0xFF154486), size: 26),
+                          SizedBox(width: 8),
+                          Text(
+                            'Update Student Academic Record',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
 
                       DropdownButtonFormField<String>(
                         value: selectedSubject,
-                        decoration: const InputDecoration(
-                          labelText: 'Select Subject',
-                          prefixIcon: Icon(Icons.book, color: Color(0xFF1E3C72)),
-                          border: OutlineInputBorder(),
+                        decoration: _buildInputDecoration(
+                          label: 'Select Subject',
+                          icon: Icons.book_outlined,
                         ),
                         items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                         onChanged: (val) {
@@ -91,7 +98,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       TextFormField(
                         key: ValueKey('att_$selectedSubject'),
                         initialValue: attendance.toString(),
-                        decoration: InputDecoration(labelText: 'Attendance (%) - $selectedSubject', border: const OutlineInputBorder()),
+                        decoration: _buildInputDecoration(
+                          label: 'Attendance (%) - $selectedSubject',
+                          icon: Icons.fact_check_outlined,
+                        ),
                         keyboardType: TextInputType.number,
                         validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid attendance' : null,
                         onSaved: (val) => attendance = double.parse(val!),
@@ -100,7 +110,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       TextFormField(
                         key: ValueKey('prev_$selectedSubject'),
                         initialValue: previousScore.toString(),
-                        decoration: InputDecoration(labelText: 'Previous Semester Score ($selectedSubject)', border: const OutlineInputBorder()),
+                        decoration: _buildInputDecoration(
+                          label: 'Previous Semester Score ($selectedSubject)',
+                          icon: Icons.grade_outlined,
+                        ),
                         keyboardType: TextInputType.number,
                         validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid score' : null,
                         onSaved: (val) => previousScore = double.parse(val!),
@@ -109,17 +122,24 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       TextFormField(
                         key: ValueKey('part_$selectedSubject'),
                         initialValue: participation.toString(),
-                        decoration: const InputDecoration(labelText: 'Class Participation Score (0-10)', border: OutlineInputBorder()),
+                        decoration: _buildInputDecoration(
+                          label: 'Class Participation Score (0-10)',
+                          icon: Icons.star_outline,
+                        ),
                         keyboardType: TextInputType.number,
                         validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid score' : null,
                         onSaved: (val) => participation = double.parse(val!),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       SizedBox(
                         width: double.infinity,
-                        height: 48,
+                        height: 50,
                         child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3C72)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF154486),
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
                           onPressed: () async {
                             if (!formKey.currentState!.validate()) return;
                             formKey.currentState!.save();
@@ -183,7 +203,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                               }
                             }
                           },
-                          child: Text('UPDATE $selectedSubject & RE-EVALUATE', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            'UPDATE $selectedSubject & RE-EVALUATE',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
                         ),
                       ),
                     ],
@@ -207,7 +230,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -235,7 +258,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-                top: 20,
+                top: 24,
                 left: 20,
                 right: 20,
               ),
@@ -246,12 +269,12 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.auto_stories, color: Color(0xFF1E3C72)),
+                        Icon(Icons.auto_stories, color: Color(0xFF154486), size: 26),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Upload University Guidelines (RAG)',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3C72)),
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
                           ),
                         ),
                       ],
@@ -264,10 +287,9 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       value: selectedSubject,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Subject',
-                        prefixIcon: Icon(Icons.book, color: Color(0xFF1E3C72)),
-                        border: OutlineInputBorder(),
+                      decoration: _buildInputDecoration(
+                        label: 'Select Subject',
+                        icon: Icons.book_outlined,
                       ),
                       items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                       onChanged: (val) {
@@ -287,22 +309,25 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       TextField(
                         controller: textController,
                         maxLines: 5,
-                        decoration: const InputDecoration(
-                          labelText: 'Curriculum & Remedial Guidelines Text',
-                          hintText: 'e.g. If student score < 70, require LeetCode Trees & Graphs practice. Midterms carry 40% weight...',
-                          border: OutlineInputBorder(),
+                        decoration: _buildInputDecoration(
+                          label: 'Curriculum & Remedial Guidelines Text',
+                          icon: Icons.edit_note,
                         ),
                       ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 50,
                       child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3C72)),
-                        icon: const Icon(Icons.cloud_upload, color: Colors.amber),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF154486),
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        icon: const Icon(Icons.cloud_upload_outlined, color: Colors.amber, size: 20),
                         label: Text(
                           isUploading ? 'INDEXING GUIDELINES...' : 'INDEX GUIDELINES FOR $selectedSubject',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                         onPressed: isUploading || isLoadingText
                             ? null
@@ -364,9 +389,17 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF15366D),
       appBar: AppBar(
-        title: const Text('Teacher Portal - Roster', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1E3C72),
+        title: Row(
+          children: const [
+            Icon(Icons.school, size: 24, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Teacher Portal - Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF15366D),
+        elevation: 0,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -391,112 +424,149 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           )
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('student_records').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF15366D), Color(0xFF1E468A), Color(0xFF2B62B8)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _firestore.collection('student_records').snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.white));
+            }
 
-          final docs = snapshot.data?.docs ?? [];
+            final docs = snapshot.data?.docs ?? [];
 
-          if (docs.isEmpty) {
-            return const Center(
-              child: Text('No student records found yet.', style: TextStyle(fontSize: 16, color: Colors.grey)),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: docs.length,
-            itemBuilder: (ctx, i) {
-              final data = docs[i].data() as Map<String, dynamic>;
-              final studentId = docs[i].id;
-              final email = data['studentEmail'] ?? 'Student ID: $studentId';
-              final prediction = data['prediction'] as Map<String, dynamic>?;
-              final subjectPredictions = (prediction?['subjectPredictions'] as Map<String, dynamic>?) ?? {};
-              final score = (prediction?['predictedExamScore'] as num?)?.toDouble();
-              final recommendations = (prediction?['recommendations'] as List<dynamic>?)?.cast<String>() ?? [];
-
-              Color statusColor = Colors.grey;
-              String statusText = 'Not Evaluated';
-
-              if (score != null) {
-                if (score < 70) {
-                  statusColor = Colors.red;
-                  statusText = 'At Risk ($score%)';
-                } else if (score < 85) {
-                  statusColor = Colors.amber.shade800;
-                  statusText = 'Moderate ($score%)';
-                } else {
-                  statusColor = Colors.green;
-                  statusText = 'On Track ($score%)';
-                }
-              }
-
-              final dsaScore = (subjectPredictions['Data Structures & Algorithms']?['predictedExamScore'] as num?)?.toDouble();
-              final aiScore = (subjectPredictions['Artificial Intelligence']?['predictedExamScore'] as num?)?.toDouble();
-              final cloudScore = (subjectPredictions['Cloud Computing']?['predictedExamScore'] as num?)?.toDouble();
-
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          backgroundColor: statusColor.withOpacity(0.2),
-                          child: Icon(Icons.person, color: statusColor),
-                        ),
-                        title: Text(
-                          email,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          statusText,
-                          style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit_document, color: Color(0xFF1E3C72)),
-                          tooltip: 'Edit Subject Marks',
-                          onPressed: () => _showAcademicFormDialog(context, studentId, data),
-                        ),
-                        onTap: () {
-                          if (score != null) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => PredictionDashboardScreen(
-                                  score: score,
-                                  recommendations: recommendations,
-                                  subjectPredictions: subjectPredictions,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildMiniSubjectChip('DSA', dsaScore),
-                          _buildMiniSubjectChip('AI', aiScore),
-                          _buildMiniSubjectChip('Cloud', cloudScore),
-                        ],
-                      )
-                    ],
-                  ),
-                ),
+            if (docs.isEmpty) {
+              return const Center(
+                child: Text('No student records found yet.', style: TextStyle(fontSize: 16, color: Colors.white70)),
               );
-            },
-          );
-        },
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              itemCount: docs.length,
+              itemBuilder: (ctx, i) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                final studentId = docs[i].id;
+                final email = data['studentEmail'] ?? 'Student ID: $studentId';
+                final prediction = data['prediction'] as Map<String, dynamic>?;
+                final subjectPredictions = (prediction?['subjectPredictions'] as Map<String, dynamic>?) ?? {};
+                final score = (prediction?['predictedExamScore'] as num?)?.toDouble();
+                final recommendations = (prediction?['recommendations'] as List<dynamic>?)?.cast<String>() ?? [];
+
+                Color statusColor = Colors.grey;
+                String statusText = 'Not Evaluated';
+
+                if (score != null) {
+                  if (score < 70) {
+                    statusColor = Colors.red;
+                    statusText = 'At Risk ($score%)';
+                  } else if (score < 85) {
+                    statusColor = Colors.amber.shade800;
+                    statusText = 'Moderate ($score%)';
+                  } else {
+                    statusColor = Colors.green;
+                    statusText = 'On Track ($score%)';
+                  }
+                }
+
+                final dsaScore = (subjectPredictions['Data Structures & Algorithms']?['predictedExamScore'] as num?)?.toDouble();
+                final aiScore = (subjectPredictions['Artificial Intelligence']?['predictedExamScore'] as num?)?.toDouble();
+                final cloudScore = (subjectPredictions['Cloud Computing']?['predictedExamScore'] as num?)?.toDouble();
+
+                return Card(
+                  elevation: 8,
+                  shadowColor: Colors.black26,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  color: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: statusColor.withOpacity(0.18),
+                            child: Icon(Icons.person, color: statusColor),
+                          ),
+                          title: Text(
+                            email,
+                            style: const TextStyle(fontWeight: FontWeight.extrabold, fontSize: 16, color: Color(0xFF154486)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            statusText,
+                            style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.edit_document, color: Color(0xFF154486)),
+                            tooltip: 'Edit Subject Marks',
+                            onPressed: () => _showAcademicFormDialog(context, studentId, data),
+                          ),
+                          onTap: () {
+                            if (score != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => PredictionDashboardScreen(
+                                    score: score,
+                                    recommendations: recommendations,
+                                    subjectPredictions: subjectPredictions,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        const Divider(),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildMiniSubjectChip('DSA', dsaScore),
+                            _buildMiniSubjectChip('AI', aiScore),
+                            _buildMiniSubjectChip('Cloud', cloudScore),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+      prefixIcon: Icon(icon, color: const Color(0xFF154486), size: 20),
+      filled: true,
+      fillColor: const Color(0xFFF4F7FB),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFBDD3F5)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFBDD3F5)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFF1D61E7), width: 2),
       ),
     );
   }
@@ -509,21 +579,20 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     return Flexible(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: col.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: col.withOpacity(0.4)),
         ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             '$label: ${s != null ? '$s%' : '--'}',
-            style: TextStyle(color: col, fontWeight: FontWeight.bold, fontSize: 12),
+            style: TextStyle(color: col, fontWeight: FontWeight.extrabold, fontSize: 12),
           ),
         ),
       ),
     );
   }
 }
-
