@@ -497,7 +497,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                           ),
                           title: Text(
                             email,
-                            style: const TextStyle(fontWeight: FontWeight.extrabold, fontSize: 16, color: Color(0xFF154486)),
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF154486)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -589,7 +589,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           fit: BoxFit.scaleDown,
           child: Text(
             '$label: ${s != null ? '$s%' : '--'}',
-            style: TextStyle(color: col, fontWeight: FontWeight.extrabold, fontSize: 12),
+            style: TextStyle(color: col, fontWeight: FontWeight.w800, fontSize: 12),
           ),
         ),
       ),
