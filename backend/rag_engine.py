@@ -3,25 +3,37 @@ import io
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Default Curriculum Recommendations per Subject
+# Default Curated Educational Corpus per Subject
 DEFAULT_SUBJECT_GUIDELINES = {
     "Data Structures & Algorithms": """
-    If predicted score is below 70%, prioritize core Data Structures: Arrays, Linked Lists, Stacks, Queues, and Trees.
-    If predicted score is 70% or above, advance your skills with complex topics: Graph Traversals (BFS/DFS), Dynamic Programming, and Trie data structures.
-    Complete weekly algorithmic practice exercises focusing on Searching & Sorting algorithms and time complexity.
-    Solve previous exam questions and practice competitive coding problems regularly.
+    Prioritize core Linear Data Structures: master array manipulations, singly and doubly linked lists, stack-based expression evaluation, and queue implementations before progressing to non-linear structures.
+    Implement tree-based algorithms from scratch: practice Binary Search Tree (BST) insertion, deletion, and lowest common ancestor, followed by Heap and Priority Queue applications.
+    Master high-yield graph traversal techniques: implement Breadth-First Search (BFS) for shortest path problems and Depth-First Search (DFS) with backtracking for cycle detection.
+    Formulate dynamic programming solutions methodically: start with top-down memoization, identify sub-problem recurrence relations, and convert to bottom-up tabulation for optimal space efficiency.
+    Conduct weekly timed mock coding sessions focusing on time and space complexity analysis (Big-O notation) and searching & sorting algorithms (QuickSort, MergeSort, Binary Search).
+    For students with attendance or lab deficits, complete missed programming lab exercises and attend peer tutoring sessions to rebuild fundamental conceptual mastery.
+    Advance to competitive programming problem sets involving Trie structures, Disjoint Set Union (DSU), Segment Trees, and advanced graph algorithms (Dijkstra's, Floyd-Warshall).
+    Review previous semester exam papers and university question banks, analyzing common pitfalls in recursion limits, pointer manipulations, and edge-case handling.
     """,
     "Artificial Intelligence": """
-    If predicted score is below 70%, review foundational Linear Algebra, Probability, and basic Machine Learning algorithms.
-    If predicted score is 70% or above, explore advanced AI topics: Neural Network Backpropagation, Convolutional Architectures, and Reinforcement Learning.
-    Complete hands-on lab exercises in Python covering Supervised Learning classification & regression models.
-    Focus revision on core exam topics: Decision Trees, Random Forests, and Search Algorithms (A* & Heuristics).
+    Reinforce mathematical foundations essential for AI: review Multivariable Calculus, Linear Algebra matrix transformations, and Bayes' Theorem conditional probability distributions.
+    Build end-to-end Supervised Learning pipelines in Python using Scikit-Learn: practice data preprocessing, feature scaling, Cross-Validation, and hyperparameter tuning with GridSearchCV.
+    Master fundamental classification and regression models: analyze Decision Trees, Random Forests, Support Vector Machines (SVM), and Logistic Regression decision boundaries.
+    Deconstruct Artificial Neural Networks: calculate gradient updates through manual backpropagation derivations and implement multi-layer perceptrons with non-linear activation functions.
+    Study heuristic search algorithms in state-space graphs: implement A* search with admissible heuristics, Minimax game trees with Alpha-Beta pruning, and hill-climbing optimization.
+    For students experiencing concept gaps, participate in weekly AI laboratory remedial sessions and implement core algorithms from first principles without external libraries.
+    Advance to modern Deep Learning paradigms: study Convolutional Neural Networks (CNN) for image recognition, Recurrent Neural Networks (RNN/LSTM) for sequential data, and Transformer self-attention.
+    Examine ethical AI principles, model interpretability with SHAP/LIME values, and regularization techniques (Dropout, L1/L2 ridge/lasso) to prevent model overfitting.
     """,
     "Cloud Computing": """
-    If predicted score is below 70%, focus on Cloud Fundamentals: Virtualization, IaaS/PaaS/SaaS service models, and Storage paradigms.
-    If predicted score is 70% or above, deep-dive into advanced Cloud Architecture: Microservices, Distributed Systems, and Serverless computing.
-    Complete practical hands-on tutorials on AWS/GCP/Azure involving EC2 instances, Virtual Private Clouds (VPC), and IAM security policies.
-    Focus revision on key exam topics: Docker containerization, Kubernetes cluster orchestration, and Cloud Security.
+    Grasp foundational Cloud Architecture principles: differentiate between IaaS, PaaS, and SaaS models, shared responsibility security frameworks, and multi-tenant virtualization.
+    Complete hands-on infrastructure provisioning on AWS/Azure/GCP: configure Virtual Private Clouds (VPC), public/private subnets, Internet Gateways, NAT Gateways, and Route Tables.
+    Implement robust Cloud Security and Governance: create granular Identity and Access Management (IAM) role-based access policies, multi-factor authentication, and KMS encryption keys.
+    Master containerization technologies: write Dockerfiles following multi-stage build best practices, manage container lifecycle, and compose multi-container application stacks.
+    Study scalable Kubernetes cluster orchestration: deploy Pods, Services, Ingress controllers, and configure Horizontal Pod Autoscalers (HPA) for automated traffic handling.
+    For students with lab attendance shortfalls, replicate practical cloud networking and EC2 compute deployment tutorials through guided cloud sandboxes and interactive labs.
+    Explore Serverless architectures and Event-Driven Design: build microservices with AWS Lambda, API Gateway, DynamoDB, and asynchronous messaging queues (SQS/SNS).
+    Review Disaster Recovery strategies, High Availability multi-region replication, and FinOps cost optimization strategies across enterprise cloud deployments.
     """
 }
 
@@ -47,7 +59,7 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
         for s in sentences:
             s = s.strip()
             s = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', s).strip()
-            if s and len(s) > 5:
+            if s and len(s) > 10:
                 chunks.append(s)
 
     return chunks if chunks else [text.strip()]
@@ -106,8 +118,8 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
-    RAG Retriever: Uses TF-IDF & Cosine Similarity to find top curriculum recommendations.
-    Filters out conditional recommendations that do not match the student's current performance metrics.
+    RAG Retriever: Uses TF-IDF embeddings & Cosine Similarity over curated educational corpus.
+    Dynamically constructs a pedagogical context query from student profile to retrieve top-k matching guidelines.
     """
     initialize_rag()
     norm_subj = _normalize_subject(subject)
@@ -126,74 +138,61 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     if not cleaned_chunks:
         return []
 
-    attendance = student_data.get("Attendance", 85.0)
-    hours = student_data.get("Hours_Studied", 15.0)
-    prev_score = student_data.get("Previous_Scores_Semester_Wise", 75.0)
+    attendance = float(student_data.get("Attendance", 85.0))
+    hours = float(student_data.get("Hours_Studied", 15.0))
+    prev_score = float(student_data.get("Previous_Scores_Semester_Wise", 75.0))
 
-    # Filter chunks based on student data metrics
-    eligible_chunks = []
-    for c in cleaned_chunks:
-        c_lower = c.lower()
-        
-        # Low score condition (<70%) -> skip if student is scoring >= 70
-        if ("below 70%" in c_lower or "score < 70" in c_lower or "scoring below 70" in c_lower) and predicted_score >= 70:
-            continue
-            
-        # High score condition (>=70%) -> skip if student is scoring < 70
-        if ("70% or above" in c_lower or "score >= 70" in c_lower or "scoring above 70" in c_lower) and predicted_score < 70:
-            continue
+    # Construct rich semantic search query representing student's academic standing
+    query_parts = [norm_subj]
 
-        # Low attendance condition (<80%) -> skip if attendance is good (>=80)
-        if ("attendance below" in c_lower or "attendance < 80" in c_lower or "missed lab" in c_lower) and attendance >= 80:
-            continue
-
-        # Low study hours condition (<15) -> skip if study hours are sufficient (>=15)
-        if ("hours < 15" in c_lower or "study hours below" in c_lower) and hours >= 15:
-            continue
-
-        eligible_chunks.append(c)
-
-    if not eligible_chunks:
-        eligible_chunks = cleaned_chunks
-
-    if len(eligible_chunks) <= top_k:
-        return eligible_chunks[:top_k]
-
-    query_keywords = [norm_subj]
-    if predicted_score < 70:
-        query_keywords.extend(["below 70%", "score low", "remedial", "failing", "core", "fundamentals"])
+    if predicted_score < 60:
+        query_parts.append("remedial foundation core basics rebuild concept gaps prerequisite tutoring peer study missed")
+    elif predicted_score < 75:
+        query_parts.append("core fundamentals practice exercises structured revision problem solving exam question banks")
     else:
-        query_keywords.extend(["70% or above", "advanced", "mastery", "complex", "high performance"])
+        query_parts.append("advanced honors complex optimization competitive mastery architectural patterns deep learning")
 
     if attendance < 80:
-        query_keywords.extend(["attendance", "missed lab", "remedial tutorial", "lectures"])
-    if hours < 15:
-        query_keywords.extend(["low study hours", "practice", "exercise", "daily"])
-    if prev_score < 70:
-        query_keywords.extend(["fundamentals", "revision", "basic"])
+        query_parts.append("attendance lab practical deficit missed exercises peer tutoring compliance catch up")
 
-    query_str = " ".join(query_keywords)
+    if hours < 14:
+        query_parts.append("study hours weekly timed sessions dedicated problem sets practice discipline")
+
+    if prev_score < 70:
+        query_parts.append("prerequisite modules fundamental concepts review previous semester gaps")
+
+    query_str = " ".join(query_parts)
 
     try:
-        vectorizer = TfidfVectorizer().fit(eligible_chunks + [query_str])
-        chunk_vectors = vectorizer.transform(eligible_chunks)
+        # Full TF-IDF Vectorization with unigram and bigram n-grams and sublinear TF scaling
+        vectorizer = TfidfVectorizer(
+            ngram_range=(1, 2),
+            sublinear_tf=True,
+            stop_words="english"
+        ).fit(cleaned_chunks + [query_str])
+
+        chunk_vectors = vectorizer.transform(cleaned_chunks)
         query_vector = vectorizer.transform([query_str])
 
         similarities = cosine_similarity(query_vector, chunk_vectors).flatten()
-        top_indices = similarities.argsort()[::-1][:top_k]
+        top_indices = similarities.argsort()[::-1]
 
         results = []
         for idx in top_indices:
-            if eligible_chunks[idx] not in results:
-                results.append(eligible_chunks[idx])
+            candidate = cleaned_chunks[idx]
+            if candidate not in results:
+                results.append(candidate)
+            if len(results) >= top_k:
+                break
 
-        return results if results else eligible_chunks[:top_k]
+        return results if results else cleaned_chunks[:top_k]
     except Exception as e:
         print(f"RAG retrieval error: {e}")
-        return eligible_chunks[:top_k]
+        return cleaned_chunks[:top_k]
 
 
 # Initialize default guidelines on module import
 initialize_rag()
+
 
 
