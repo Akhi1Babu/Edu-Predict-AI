@@ -71,17 +71,21 @@ def load_firestore_guidelines():
     if db is not None:
         try:
             docs = db.collection("subject_guidelines").stream()
+            count = 0
             for doc in docs:
                 data = doc.to_dict()
-                subj = data.get("subject")
+                subj = data.get("subject") or doc.id
                 text = data.get("text") or data.get("textContent")
-                if subj and text:
+                if subj and text and text.strip():
                     index_document_text(subj, text, append=False)
-            print("Loaded subject guidelines from Firestore into RAG engine successfully.")
+                    count += 1
+            if count > 0:
+                print(f"Loaded {count} custom subject guidelines from Firestore into RAG engine successfully.")
         except Exception as e:
             print(f"Firestore guidelines load notice: {e}")
 
 load_firestore_guidelines()
+
 
 # Define Pydantic Schema for Direct Prediction API
 class StudentInput(BaseModel):
@@ -149,6 +153,7 @@ def predict_exam_score(student: StudentInput):
     if model is None:
         raise HTTPException(status_code=500, detail="ML Model is not loaded on server.")
     
+    load_firestore_guidelines()
     student_dict = student.model_dump()
     subject = student_dict.get("Subject", "Data Structures & Algorithms")
     feature_vector = np.array([[student_dict[feature] for feature in FEATURE_ORDER]])
@@ -175,6 +180,7 @@ def sync_student_prediction(student_id: str, payload: dict = None):
     if model is None:
         raise HTTPException(status_code=500, detail="ML Model is not loaded.")
     
+    load_firestore_guidelines()
     data = {}
     if db is not None:
         try:

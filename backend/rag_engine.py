@@ -50,23 +50,38 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
     return chunks if chunks else [text.strip()]
 
 
+def _normalize_subject(subject: str) -> str:
+    if not subject:
+        return "Data Structures & Algorithms"
+    s = subject.strip().lower()
+    if "data" in s or "dsa" in s or "structure" in s or "algorithm" in s:
+        return "Data Structures & Algorithms"
+    if "ai" in s or "artificial" in s or "intelligence" in s:
+        return "Artificial Intelligence"
+    if "cloud" in s or "aws" in s or "computing" in s:
+        return "Cloud Computing"
+    return subject.strip()
+
+
 def initialize_rag():
     """Initializes RAG index with default curriculum recommendations."""
     global _SUBJECT_CHUNKS
     for subject, text in DEFAULT_SUBJECT_GUIDELINES.items():
-        if subject not in _SUBJECT_CHUNKS or not _SUBJECT_CHUNKS[subject]:
-            _SUBJECT_CHUNKS[subject] = _chunk_text(text)
+        norm_subj = _normalize_subject(subject)
+        if norm_subj not in _SUBJECT_CHUNKS or not _SUBJECT_CHUNKS[norm_subj]:
+            _SUBJECT_CHUNKS[norm_subj] = _chunk_text(text)
 
 
 def index_document_text(subject: str, text: str, append: bool = False):
     """Indexes text content for a subject, replacing defaults with teacher's custom guidelines."""
     initialize_rag()
+    norm_subj = _normalize_subject(subject)
     new_chunks = _chunk_text(text)
-    if append and subject in _SUBJECT_CHUNKS:
-        _SUBJECT_CHUNKS[subject].extend(new_chunks)
+    if append and norm_subj in _SUBJECT_CHUNKS:
+        _SUBJECT_CHUNKS[norm_subj].extend(new_chunks)
     else:
-        _SUBJECT_CHUNKS[subject] = new_chunks
-    _CUSTOM_SUBJECTS.add(subject)
+        _SUBJECT_CHUNKS[norm_subj] = new_chunks
+    _CUSTOM_SUBJECTS.add(norm_subj)
 
 
 def parse_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -92,7 +107,8 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     Returns clean recommendation strings without prefixes or bullet artifacts.
     """
     initialize_rag()
-    chunks = _SUBJECT_CHUNKS.get(subject, [])
+    norm_subj = _normalize_subject(subject)
+    chunks = _SUBJECT_CHUNKS.get(norm_subj, [])
     if not chunks:
         chunks = _SUBJECT_CHUNKS.get("Data Structures & Algorithms", [])
     if not chunks:
@@ -114,7 +130,7 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     hours = student_data.get("Hours_Studied", 15.0)
     prev_score = student_data.get("Previous_Scores_Semester_Wise", 75.0)
 
-    query_keywords = [subject]
+    query_keywords = [norm_subj]
     if predicted_score < 70:
         query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "failing", "core", "fundamentals"])
     if attendance < 80:
