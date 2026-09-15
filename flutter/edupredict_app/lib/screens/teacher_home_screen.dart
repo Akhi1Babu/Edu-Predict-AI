@@ -197,6 +197,137 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     );
   }
 
+  void _showUploadGuidelinesDialog(BuildContext context) {
+    String selectedSubject = "Data Structures & Algorithms";
+    final textController = TextEditingController();
+    bool isUploading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                top: 20,
+                left: 20,
+                right: 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.auto_stories, color: Color(0xFF1E3C72)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Upload University Guidelines (RAG)',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E3C72)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Enter university curriculum rules, syllabus weightage, or remedial policies for this subject.',
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: selectedSubject,
+                      decoration: const InputDecoration(
+                        labelText: 'Select Subject',
+                        prefixIcon: Icon(Icons.book, color: Color(0xFF1E3C72)),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => selectedSubject = val);
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: textController,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'Curriculum & Remedial Guidelines Text',
+                        hintText: 'e.g. If student score < 70, require LeetCode Trees & Graphs practice. Midterms carry 40% weight...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3C72)),
+                        icon: const Icon(Icons.cloud_upload, color: Colors.amber),
+                        label: Text(
+                          isUploading ? 'INDEXING GUIDELINES...' : 'INDEX GUIDELINES FOR $selectedSubject',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        onPressed: isUploading
+                            ? null
+                            : () async {
+                                final text = textController.text.trim();
+                                if (text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Please enter guideline text.')),
+                                  );
+                                  return;
+                                }
+
+                                setModalState(() => isUploading = true);
+
+                                try {
+                                  final url = Uri.parse('${BackendService.url}/upload-guidelines/${Uri.encodeComponent(selectedSubject)}');
+                                  final res = await http.post(
+                                    url,
+                                    body: {'text_content': text},
+                                  ).timeout(const Duration(seconds: 10));
+
+                                  if (ctx.mounted) Navigator.of(ctx).pop();
+
+                                  if (res.statusCode == 200) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Successfully indexed RAG guidelines for $selectedSubject!')),
+                                      );
+                                    }
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Upload failed with status ${res.statusCode}')),
+                                      );
+                                    }
+                                  }
+                                } catch (e) {
+                                  if (ctx.mounted) Navigator.of(ctx).pop();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Upload notice: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -205,6 +336,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         backgroundColor: const Color(0xFF1E3C72),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.library_books),
+            tooltip: 'Upload University Guidelines (RAG)',
+            onPressed: () => _showUploadGuidelinesDialog(context),
+          ),
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: 'Configure Backend Server IP',

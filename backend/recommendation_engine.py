@@ -1,9 +1,21 @@
+from rag_engine import retrieve_university_guidelines
+
+
 def generate_recommendations(data: dict, predicted_score: float, subject: str = "General") -> list[str]:
     """
     Generates personalized, actionable recommendations for students 
-    based on predicted exam score, key performance drivers, and specific subject context.
+    based on predicted exam score, key performance drivers, subject context, 
+    and RAG-retrieved university curriculum guidelines.
     """
     recommendations = []
+
+    # 0. RAG University Guidelines Retrieval
+    try:
+        rag_guidelines = retrieve_university_guidelines(subject, data, predicted_score, top_k=2)
+        if rag_guidelines:
+            recommendations.extend(rag_guidelines)
+    except Exception as e:
+        print(f"RAG integration error: {e}")
 
     # 1. Subject-Specific Specific Recommendations
     subj_upper = subject.upper()
@@ -85,4 +97,5 @@ def generate_recommendations(data: dict, predicted_score: float, subject: str = 
         )
 
     return recommendations
+
 

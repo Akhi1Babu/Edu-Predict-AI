@@ -217,7 +217,11 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                   Color borderColor = Colors.blue;
                   IconData iconData = Icons.info;
 
-                  if (rec.contains('CRITICAL') || rec.contains('FOCUS')) {
+                  if (rec.contains('UNIVERSITY GUIDELINE') || rec.startsWith('🎓')) {
+                    cardColor = const Color(0xFF1E3C72).withOpacity(0.08);
+                    borderColor = const Color(0xFF1E3C72);
+                    iconData = Icons.school;
+                  } else if (rec.contains('CRITICAL') || rec.contains('FOCUS')) {
                     cardColor = Colors.red.shade50;
                     borderColor = Colors.red;
                     iconData = Icons.warning_rounded;

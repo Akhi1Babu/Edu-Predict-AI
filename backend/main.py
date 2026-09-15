@@ -3,12 +3,13 @@ import os
 import joblib
 import numpy as np
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
 from recommendation_engine import generate_recommendations
+from rag_engine import index_document_text, parse_pdf_bytes, _SUBJECT_CHUNKS
 
 # Firebase Admin Imports
 try:
@@ -224,4 +225,51 @@ def sync_student_prediction(student_id: str, payload: dict = None):
         "status": "success",
         "student_id": student_id,
         "prediction": prediction_payload
+    }
+
+
+@app.post("/upload-guidelines/{subject}")
+async def upload_subject_guidelines(
+    subject: str,
+    text_content: str = Form(None),
+    file: UploadFile = File(None)
+):
+    content = ""
+    if file is not None:
+        file_bytes = await file.read()
+        if file.filename.lower().endswith(".pdf"):
+            content = parse_pdf_bytes(file_bytes)
+        else:
+            content = file_bytes.decode("utf-8", errors="ignore")
+    elif text_content:
+        content = text_content
+
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="No valid text or document content provided.")
+
+    index_document_text(subject, content)
+
+    if db is not None:
+        try:
+            db.collection("subject_guidelines").document(subject).set({
+                "subject": subject,
+                "text": content,
+                "lastUpdated": firestore.SERVER_TIMESTAMP
+            }, merge=True)
+        except Exception as e:
+            print(f"Firestore guideline save error: {e}")
+
+    return {
+        "status": "success",
+        "subject": subject,
+        "message": f"Successfully indexed curriculum guidelines for {subject}."
+    }
+
+
+@app.get("/get-guidelines/{subject}")
+def get_subject_guidelines(subject: str):
+    chunks = _SUBJECT_CHUNKS.get(subject, [])
+    return {
+        "subject": subject,
+        "chunks": chunks
     }
