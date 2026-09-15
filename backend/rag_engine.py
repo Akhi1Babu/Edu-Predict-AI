@@ -3,37 +3,32 @@ import io
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Default University Curriculum Guidelines per Subject
+# Default Curriculum Recommendations per Subject
 DEFAULT_SUBJECT_GUIDELINES = {
     "Data Structures & Algorithms": """
-    University Syllabus & Remedial Policy - Data Structures & Algorithms (DSA):
-    - Policy 1: If a student's predicted score is below 70%, they must prioritize fundamental Problem Solving: Array operations, Linked Lists, Stack, and Queue implementations before midterms.
-    - Policy 2: For students with low study hours (< 15 hrs/week), complete mandatory weekly coding exercises on LeetCode / HackerRank focusing on Searching & Sorting algorithms.
-    - Policy 3: High-yield exam topics carry 45% weight: Binary Search Trees, Graph Traversals (BFS/DFS), and Dynamic Programming. Focus 10 hours of revision on DP memoization.
-    - Policy 4: Students with attendance < 80% must attend weekly remedial lab tutorial sessions to cover missed algorithmic code walk-throughs.
+    If predicted score is below 70%, prioritize core Data Structures: Arrays, Linked Lists, Stacks, Queues, and Trees.
+    Complete weekly algorithmic practice exercises focusing on Searching & Sorting algorithms.
+    Focus revision on high-yield exam topics: Binary Search Trees, Graph Traversals (BFS/DFS), and Dynamic Programming.
     """,
     "Artificial Intelligence": """
-    University Syllabus & Remedial Policy - Artificial Intelligence (AI):
-    - Policy 1: If a student's predicted score is below 70%, review foundational Mathematics: Linear Algebra (matrix operations), Probability & Statistics, and Multivariate Calculus.
-    - Policy 2: Mandatory hands-on lab policy: Complete mini-projects using Python (Scikit-Learn, PyTorch, or TensorFlow) covering Supervised Learning classification & regression models.
-    - Policy 3: High-yield exam topics carry 50% weight: Neural Network Backpropagation, Decision Trees, Random Forests, and Search Algorithms (A* and Minimax).
-    - Policy 4: Students falling behind should utilize interactive Google Colab notebooks and university online video lectures for deep learning architectures.
+    If predicted score is below 70%, review foundational Linear Algebra, Probability, and Machine Learning algorithms.
+    Complete hands-on lab exercises in Python covering Supervised Learning classification & regression models.
+    Focus revision on core exam topics: Neural Network Backpropagation, Decision Trees, Random Forests, and Search Algorithms.
     """,
     "Cloud Computing": """
-    University Syllabus & Remedial Policy - Cloud Computing:
-    - Policy 1: If a student's predicted score is below 70%, focus on core Cloud Fundamentals: Virtualization, IaaS/PaaS/SaaS service models, and Cloud Storage paradigms.
-    - Policy 2: Practical Lab requirement: Complete hands-on tutorials on AWS / GCP / Azure free tier involving EC2 instance setup, Virtual Private Clouds (VPC), and IAM security policies.
-    - Policy 3: High-yield exam topics carry 45% weight: Docker containerization, Kubernetes cluster orchestration, Microservices architecture, and Serverless computing (AWS Lambda).
-    - Policy 4: Students needing score improvement must review cloud security compliance, encryption standards, and load balancing algorithms.
+    If predicted score is below 70%, focus on Cloud Fundamentals: Virtualization, IaaS/PaaS/SaaS service models, and Storage paradigms.
+    Complete practical hands-on tutorials on AWS/GCP/Azure involving EC2 instances, Virtual Private Clouds (VPC), and IAM security policies.
+    Focus revision on key exam topics: Docker containerization, Kubernetes cluster orchestration, and Serverless computing.
     """
 }
 
 # In-memory index of subject chunks: { subject: [chunk1, chunk2, ...] }
 _SUBJECT_CHUNKS = {}
+_CUSTOM_SUBJECTS = set()
 
 
 def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
-    """Splits document text into clean semantic chunks."""
+    """Splits document text into clean semantic recommendation chunks."""
     sentences = re.split(r'(?<=[.!?\n]) +', text.strip())
     chunks = []
     current_chunk = ""
@@ -55,11 +50,8 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
     return chunks if chunks else [text]
 
 
-_CUSTOM_SUBJECTS = set()
-
-
 def initialize_rag():
-    """Initializes RAG index with default university curriculum guidelines."""
+    """Initializes RAG index with default curriculum recommendations."""
     global _SUBJECT_CHUNKS
     for subject, text in DEFAULT_SUBJECT_GUIDELINES.items():
         if subject not in _SUBJECT_CHUNKS or not _SUBJECT_CHUNKS[subject]:
@@ -95,8 +87,8 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
-    RAG Retriever: Uses TF-IDF & Cosine Similarity to find top university curriculum rules.
-    Prioritizes custom teacher guidelines uploaded for the subject.
+    RAG Retriever: Uses TF-IDF & Cosine Similarity to find top curriculum recommendations.
+    Returns clean recommendation strings without prefixes.
     """
     initialize_rag()
     chunks = _SUBJECT_CHUNKS.get(subject, [])
@@ -105,16 +97,17 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     if not chunks:
         return []
 
+    # Helper to clean up any unwanted prefixes
+    def clean_text(c: str) -> str:
+        return c.replace("🎓 UNIVERSITY GUIDELINE:", "").replace("🎓", "").replace("DSA FOCUS:", "").replace("AI FOCUS:", "").replace("CLOUD FOCUS:", "").strip()
+
     # If teacher uploaded custom guidelines for this subject, return the teacher's guidelines directly
     if subject in _CUSTOM_SUBJECTS or len(chunks) <= top_k:
         results = []
         for c in chunks[:top_k]:
-            clean_chunk = c.strip()
+            clean_chunk = clean_text(c)
             if clean_chunk:
-                if clean_chunk.startswith("🎓"):
-                    results.append(clean_chunk)
-                else:
-                    results.append(f"🎓 UNIVERSITY GUIDELINE: {clean_chunk}")
+                results.append(clean_chunk)
         return results
 
     # Fallback to TF-IDF retrieval for multi-chunk documents
@@ -144,15 +137,14 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
 
         results = []
         for idx in top_indices:
-            clean_chunk = chunks[idx].strip()
+            clean_chunk = clean_text(chunks[idx])
             if clean_chunk:
-                prefix = "" if clean_chunk.startswith("🎓") else "🎓 UNIVERSITY GUIDELINE: "
-                results.append(f"{prefix}{clean_chunk}")
+                results.append(clean_chunk)
 
-        return results if results else [f"🎓 UNIVERSITY GUIDELINE: {c.strip()}" for c in chunks[:top_k]]
+        return results if results else [clean_text(c) for c in chunks[:top_k]]
     except Exception as e:
         print(f"RAG retrieval error: {e}")
-        return [f"🎓 UNIVERSITY GUIDELINE: {c.strip()}" for c in chunks[:top_k]]
+        return [clean_text(c) for c in chunks[:top_k]]
 
 
 # Initialize default guidelines on module import

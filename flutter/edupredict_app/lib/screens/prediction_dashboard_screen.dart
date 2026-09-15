@@ -212,50 +212,36 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: displayRecs.length,
                 itemBuilder: (ctx, index) {
-                  final rec = displayRecs[index];
-                  Color cardColor = Colors.blue.shade50;
-                  Color borderColor = Colors.blue;
-                  IconData iconData = Icons.info;
-
-                  if (rec.contains('UNIVERSITY GUIDELINE') || rec.startsWith('🎓')) {
-                    cardColor = const Color(0xFF1E3C72).withOpacity(0.08);
-                    borderColor = const Color(0xFF1E3C72);
-                    iconData = Icons.school;
-                  } else if (rec.contains('CRITICAL') || rec.contains('FOCUS')) {
-                    cardColor = Colors.red.shade50;
-                    borderColor = Colors.red;
-                    iconData = Icons.warning_rounded;
-                  } else if (rec.contains('EXCELLENT') || rec.contains('On track')) {
-                    cardColor = Colors.green.shade50;
-                    borderColor = Colors.green;
-                    iconData = Icons.check_circle;
-                  } else if (rec.contains('SUGGESTION') || rec.contains('RECOMMENDED') || rec.contains('RESOURCE') || rec.contains('TIP')) {
-                    cardColor = Colors.amber.shade50;
-                    borderColor = Colors.amber.shade800;
-                    iconData = Icons.tips_and_updates;
-                  }
+                  final rawRec = displayRecs[index];
+                  final rec = rawRec
+                      .replaceAll('🎓 UNIVERSITY GUIDELINE:', '')
+                      .replaceAll('🎓', '')
+                      .replaceAll('DSA FOCUS:', '')
+                      .replaceAll('AI FOCUS:', '')
+                      .replaceAll('CLOUD FOCUS:', '')
+                      .trim();
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor.withOpacity(0.5), width: 1.5),
+                      color: const Color(0xFF1E3C72).withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF1E3C72).withOpacity(0.2), width: 1.5),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(iconData, color: borderColor, size: 24),
+                        const Icon(Icons.stars_rounded, color: Color(0xFF1E3C72), size: 22),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            rec,
-                            style: TextStyle(
+                            rec.isEmpty ? rawRec : rec,
+                            style: const TextStyle(
                               fontSize: 14,
-                              height: 1.4,
-                              color: Colors.grey.shade900,
-                              fontWeight: FontWeight.w500,
+                              height: 1.45,
+                              color: Color(0xFF0F2B5B),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
