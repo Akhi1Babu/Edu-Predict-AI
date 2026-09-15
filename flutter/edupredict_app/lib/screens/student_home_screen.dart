@@ -157,9 +157,17 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     if (_user == null) return const AuthScreen();
 
     return Scaffold(
+      backgroundColor: const Color(0xFF15366D),
       appBar: AppBar(
-        title: const Text('Student Portal', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1E3C72),
+        title: Row(
+          children: const [
+            Icon(Icons.school, size: 24, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Student Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF15366D),
+        elevation: 0,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -169,6 +177,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: 'Log Out',
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               if (!context.mounted) return;
@@ -180,7 +189,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : StreamBuilder<DocumentSnapshot>(
               stream: _firestore.collection('student_records').doc(_user.uid).snapshots(),
               builder: (context, snapshot) {
@@ -193,73 +202,166 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 final recommendations = (selectedPred?['recommendations'] as List<dynamic>?)?.cast<String>() ??
                     (prediction?['recommendations'] as List<dynamic>?)?.cast<String>() ?? [];
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Subject Selector Dropdown / Segment
-                      const Text(
-                        'Select Subject',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF1E3C72).withOpacity(0.3)),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))
-                          ],
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _selectedSubject,
-                            isExpanded: true,
-                            icon: const Icon(Icons.arrow_drop_down_circle, color: Color(0xFF1E3C72)),
-                            items: _subjects.map((subj) {
-                              return DropdownMenuItem<String>(
-                                value: subj,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      subj.contains('Data')
-                                          ? Icons.code
-                                          : subj.contains('Artificial')
-                                              ? Icons.psychology
-                                              : Icons.cloud,
-                                      color: const Color(0xFF1E3C72),
+                return Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF15366D), Color(0xFF1E468A), Color(0xFF2B62B8)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Top Hero Header Banner matching Login Screen UI
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Text Info
+                              Expanded(
+                                flex: 6,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: const [
+                                    Text(
+                                      'A Smarter\nTomorrow for\nEvery Learner',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        height: 1.15,
+                                      ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Text(subj, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                    SizedBox(height: 6),
+                                    Text(
+                                      'Predict  •  Improve  •  Succeed',
+                                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                                    ),
                                   ],
                                 ),
-                              );
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedSubject = val;
-                                  _updateFormForSubject(val, docData?['studentInputs'] as Map<String, dynamic>?);
-                                });
-                              }
-                            },
+                              ),
+
+                              // Student Graphic & Floating Badges
+                              Expanded(
+                                flex: 5,
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: const [
+                                      BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.asset(
+                                          'assets/images/student_illustration.jpg',
+                                          height: 120,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) => Container(
+                                            color: Colors.white24,
+                                            child: const Icon(Icons.school, size: 48, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 6,
+                                        right: 6,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            _buildHeaderChip(Icons.menu_book, 'Learn'),
+                                            const SizedBox(height: 4),
+                                            _buildHeaderChip(Icons.track_changes, 'Track'),
+                                            const SizedBox(height: 4),
+                                            _buildHeaderChip(Icons.bar_chart, 'Achieve'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
 
-                      // Prediction Card Banner
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        color: const Color(0xFF1E3C72),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: SizedBox(
-                            width: double.infinity,
+                        // Subject Selection Segment Chips
+                        Row(
+                          children: _subjects.map((subj) {
+                            final isCurrent = subj == _selectedSubject;
+                            final subjPred = subjectPredictions[subj] as Map<String, dynamic>?;
+                            final sScore = subjPred?['predictedExamScore'];
+
+                            String shortName = subj.contains('Data') ? 'DSA' : subj.contains('Artificial') ? 'AI' : 'Cloud';
+
+                            return Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedSubject = subj;
+                                    _updateFormForSubject(subj, docData?['studentInputs'] as Map<String, dynamic>?);
+                                  });
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: isCurrent ? Colors.white : Colors.white.withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: isCurrent
+                                        ? [const BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2))]
+                                        : [],
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        shortName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: isCurrent ? const Color(0xFF154486) : Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        sScore != null ? '$sScore%' : '--',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.extrabold,
+                                          fontSize: 13,
+                                          color: isCurrent
+                                              ? ((sScore as num?) ?? 100) < 70
+                                                  ? Colors.red
+                                                  : Colors.green.shade700
+                                              : Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // AI Score Banner Widget
+                        Card(
+                          elevation: 8,
+                          shadowColor: Colors.black26,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -269,38 +371,70 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     Expanded(
                                       child: Text(
                                         _selectedSubject,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600),
+                                        style: const TextStyle(
+                                          color: Color(0xFF154486),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.extrabold,
+                                        ),
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.shade700,
+                                        color: (score as num? ?? 100) < 70
+                                            ? Colors.red.shade100
+                                            : (score as num? ?? 100) < 85
+                                                ? Colors.amber.shade100
+                                                : Colors.green.shade100,
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      child: const Text('AI Score', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 12)),
+                                      child: Text(
+                                        (score as num? ?? 100) < 70
+                                            ? 'At Risk'
+                                            : (score as num? ?? 100) < 85
+                                                ? 'Moderate'
+                                                : 'On Track',
+                                        style: TextStyle(
+                                          color: (score as num? ?? 100) < 70
+                                              ? Colors.red.shade900
+                                              : (score as num? ?? 100) < 85
+                                                  ? Colors.amber.shade900
+                                                  : Colors.green.shade900,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     )
                                   ],
                                 ),
-                                const SizedBox(height: 10),
-                                Wrap(
-                                  alignment: WrapAlignment.spaceBetween,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  spacing: 12,
-                                  runSpacing: 12,
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      score != null ? '$score%' : 'Not Evaluated',
-                                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text('Predicted Score', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                        Text(
+                                          score != null ? '$score%' : 'Not Evaluated',
+                                          style: const TextStyle(
+                                            color: Color(0xFF154486),
+                                            fontSize: 32,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     ElevatedButton.icon(
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.amber,
-                                        foregroundColor: Colors.black,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        backgroundColor: const Color(0xFF154486),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                       ),
-                                      icon: const Icon(Icons.analytics, size: 20),
-                                      label: const Text('View 3 Subjects', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                      icon: const Icon(Icons.analytics_outlined, size: 18),
+                                      label: const Text('View Analytics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                       onPressed: () {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
@@ -319,213 +453,298 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                             ),
                           ),
                         ),
-                      ),
 
-                      const SizedBox(height: 20),
-                      // Quick Subject Summary Row
-                      Row(
-                        children: _subjects.map((subj) {
-                          final isCurrent = subj == _selectedSubject;
-                          final subjPred = subjectPredictions[subj] as Map<String, dynamic>?;
-                          final sScore = subjPred?['predictedExamScore'];
+                        const SizedBox(height: 16),
 
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _selectedSubject = subj;
-                                  _updateFormForSubject(subj, docData?['studentInputs'] as Map<String, dynamic>?);
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: isCurrent ? const Color(0xFF1E3C72).withOpacity(0.1) : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: isCurrent ? const Color(0xFF1E3C72) : Colors.grey.shade300,
-                                    width: isCurrent ? 2 : 1,
+                        // Form Container Card
+                        Card(
+                          elevation: 8,
+                          shadowColor: Colors.black26,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(22.0),
+                            child: Form(
+                              key: _formKey,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.edit_note, color: Color(0xFF154486), size: 24),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Study Habits for $_selectedSubject',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF154486),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      subj.contains('Data') ? 'DSA' : subj.contains('Artificial') ? 'AI' : 'Cloud',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isCurrent ? const Color(0xFF1E3C72) : Colors.grey.shade700,
+                                  const SizedBox(height: 16),
+
+                                  // Hours Studied
+                                  TextFormField(
+                                    key: ValueKey('hours_$_selectedSubject'),
+                                    initialValue: _hoursStudied.toString(),
+                                    decoration: _buildInputDecoration(
+                                      label: 'Hours Studied per Week ($_selectedSubject)',
+                                      icon: Icons.timer_outlined,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
+                                    onSaved: (val) => _hoursStudied = double.parse(val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Previous Score
+                                  TextFormField(
+                                    key: ValueKey('prev_$_selectedSubject'),
+                                    initialValue: _previousScore.toString(),
+                                    decoration: _buildInputDecoration(
+                                      label: 'Previous Semester Score % ($_selectedSubject)',
+                                      icon: Icons.grade_outlined,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid score' : null,
+                                    onSaved: (val) => _previousScore = double.parse(val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Sleep Hours
+                                  TextFormField(
+                                    key: ValueKey('sleep_$_selectedSubject'),
+                                    initialValue: _sleepHours.toString(),
+                                    decoration: _buildInputDecoration(
+                                      label: 'Average Sleep Hours per Night',
+                                      icon: Icons.bedtime_outlined,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
+                                    onSaved: (val) => _sleepHours = double.parse(val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Motivation Level Dropdown
+                                  DropdownButtonFormField<int>(
+                                    value: _motivationLevel,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Motivation Level',
+                                      icon: Icons.psychology_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Low')),
+                                      DropdownMenuItem(value: 1, child: Text('Medium')),
+                                      DropdownMenuItem(value: 2, child: Text('High')),
+                                    ],
+                                    onChanged: (val) => setState(() => _motivationLevel = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Teacher Quality Dropdown
+                                  DropdownButtonFormField<int>(
+                                    value: _teacherQuality,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Teacher Quality Rating',
+                                      icon: Icons.star_outline,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Low')),
+                                      DropdownMenuItem(value: 1, child: Text('Average')),
+                                      DropdownMenuItem(value: 2, child: Text('High')),
+                                      DropdownMenuItem(value: 3, child: Text('Excellent')),
+                                    ],
+                                    onChanged: (val) => setState(() => _teacherQuality = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Internet Access
+                                  DropdownButtonFormField<int>(
+                                    value: _internetAccess,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Internet Access at Home',
+                                      icon: Icons.wifi_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('No')),
+                                      DropdownMenuItem(value: 1, child: Text('Yes')),
+                                    ],
+                                    onChanged: (val) => setState(() => _internetAccess = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Extracurriculars
+                                  DropdownButtonFormField<int>(
+                                    value: _extracurriculars,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Extracurricular Activities',
+                                      icon: Icons.sports_soccer_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('No')),
+                                      DropdownMenuItem(value: 1, child: Text('Yes')),
+                                    ],
+                                    onChanged: (val) => setState(() => _extracurriculars = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Physical Activity
+                                  TextFormField(
+                                    key: ValueKey('activity_$_selectedSubject'),
+                                    initialValue: _physicalActivity.toString(),
+                                    decoration: _buildInputDecoration(
+                                      label: 'Physical Activity (Hours/Week)',
+                                      icon: Icons.fitness_center_outlined,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
+                                    onSaved: (val) => _physicalActivity = double.parse(val!),
+                                  ),
+                                  const SizedBox(height: 20),
+
+                                  // Submit Save Habits Button
+                                  if (_isSaving)
+                                    const Center(child: CircularProgressIndicator())
+                                  else
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 50,
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF154486),
+                                          foregroundColor: Colors.white,
+                                          elevation: 4,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        ),
+                                        icon: const Icon(Icons.save_outlined, size: 20),
+                                        label: Text(
+                                          'SAVE HABITS FOR $_selectedSubject',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.8),
+                                        ),
+                                        onPressed: _saveStudentHabits,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      sScore != null ? '$sScore%' : '--',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: sScore != null && (sScore as num) < 70 ? Colors.red : Colors.green.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                ],
                               ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 24),
-                      Text('Habits for $_selectedSubject', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-
-                      // Form
-                      Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                 TextFormField(
-                                  key: ValueKey('hours_$_selectedSubject'),
-                                  initialValue: _hoursStudied.toString(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Hours Studied per Week ($_selectedSubject)',
-                                    prefixIcon: const Icon(Icons.timer),
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
-                                  onSaved: (val) => _hoursStudied = double.parse(val!),
-                                ),
-                                const SizedBox(height: 16),
-                                TextFormField(
-                                  key: ValueKey('prev_$_selectedSubject'),
-                                  initialValue: _previousScore.toString(),
-                                  decoration: InputDecoration(
-                                    labelText: 'Previous Semester Score % ($_selectedSubject)',
-                                    prefixIcon: const Icon(Icons.grade),
-                                    border: const OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid score' : null,
-                                  onSaved: (val) => _previousScore = double.parse(val!),
-                                ),
-                                const SizedBox(height: 16),
-                                TextFormField(
-                                  key: ValueKey('sleep_$_selectedSubject'),
-                                  initialValue: _sleepHours.toString(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Average Sleep Hours per Night',
-                                    prefixIcon: Icon(Icons.bedtime),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
-                                  onSaved: (val) => _sleepHours = double.parse(val!),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: _motivationLevel,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Motivation Level',
-                                    prefixIcon: Icon(Icons.psychology),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 0, child: Text('Low')),
-                                    DropdownMenuItem(value: 1, child: Text('Medium')),
-                                    DropdownMenuItem(value: 2, child: Text('High')),
-                                  ],
-                                  onChanged: (val) => setState(() => _motivationLevel = val!),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: _teacherQuality,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Teacher Quality Rating',
-                                    prefixIcon: Icon(Icons.star),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 0, child: Text('Low')),
-                                    DropdownMenuItem(value: 1, child: Text('Average')),
-                                    DropdownMenuItem(value: 2, child: Text('High')),
-                                    DropdownMenuItem(value: 3, child: Text('Excellent')),
-                                  ],
-                                  onChanged: (val) => setState(() => _teacherQuality = val!),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: _internetAccess,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Internet Access at Home',
-                                    prefixIcon: Icon(Icons.wifi),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 0, child: Text('No')),
-                                    DropdownMenuItem(value: 1, child: Text('Yes')),
-                                  ],
-                                  onChanged: (val) => setState(() => _internetAccess = val!),
-                                ),
-                                const SizedBox(height: 16),
-                                DropdownButtonFormField<int>(
-                                  value: _extracurriculars,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Extracurricular Activities',
-                                    prefixIcon: Icon(Icons.sports_soccer),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(value: 0, child: Text('No')),
-                                    DropdownMenuItem(value: 1, child: Text('Yes')),
-                                  ],
-                                  onChanged: (val) => setState(() => _extracurriculars = val!),
-                                ),
-                                const SizedBox(height: 16),
-                                TextFormField(
-                                  key: ValueKey('activity_$_selectedSubject'),
-                                  initialValue: _physicalActivity.toString(),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Physical Activity (Hours/Week)',
-                                    prefixIcon: Icon(Icons.fitness_center),
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid hours' : null,
-                                  onSaved: (val) => _physicalActivity = double.parse(val!),
-                                ),
-                                const SizedBox(height: 24),
-                                if (_isSaving)
-                                  const CircularProgressIndicator()
-                                else
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 48,
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF1E3C72),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                      icon: const Icon(Icons.save),
-                                      label: Text('SAVE HABITS FOR $_selectedSubject', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      onPressed: _saveStudentHabits,
-                                    ),
-                                  ),
-                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(height: 16),
+
+                        // RAG Recommendations Container Card
+                        if (recommendations.isNotEmpty) ...[
+                          Card(
+                            elevation: 6,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            color: const Color(0xFFF0F5FF),
+                            child: Padding(
+                              padding: const EdgeInsets.all(18.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: const [
+                                      Icon(Icons.tips_and_updates, color: Color(0xFF1D61E7)),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'AI Recommendations (Curriculum RAG)',
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF154486)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ...recommendations.map(
+                                    (rec) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1D61E7))),
+                                          Expanded(
+                                            child: Text(rec, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Quote Footer
+                        Center(
+                          child: Text(
+                            '"Education is the most powerful weapon to change the future."',
+                            style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.85)),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
     );
   }
-}
 
+  InputDecoration _buildInputDecoration({
+    required String label,
+    required IconData icon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+      prefixIcon: Icon(icon, color: const Color(0xFF154486), size: 20),
+      filled: true,
+      fillColor: const Color(0xFFF4F7FB),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFBDD3F5)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFFBDD3F5)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: Color(0xFF1D61E7), width: 2),
+      ),
+    );
+  }
+
+  Widget _buildHeaderChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFF154486)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF154486),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
