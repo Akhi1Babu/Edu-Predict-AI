@@ -66,6 +66,23 @@ if FIREBASE_AVAILABLE:
     except Exception as e:
         print(f"Error initializing Firebase Admin: {e}")
 
+
+def load_firestore_guidelines():
+    if db is not None:
+        try:
+            docs = db.collection("subject_guidelines").stream()
+            for doc in docs:
+                data = doc.to_dict()
+                subj = data.get("subject")
+                text = data.get("text") or data.get("textContent")
+                if subj and text:
+                    index_document_text(subj, text, append=False)
+            print("Loaded subject guidelines from Firestore into RAG engine successfully.")
+        except Exception as e:
+            print(f"Firestore guidelines load notice: {e}")
+
+load_firestore_guidelines()
+
 # Define Pydantic Schema for Direct Prediction API
 class StudentInput(BaseModel):
     Subject: str = Field("Data Structures & Algorithms", description="Subject name (DSA, AI, Cloud)")

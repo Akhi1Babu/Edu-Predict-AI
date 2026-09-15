@@ -201,6 +201,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     String selectedSubject = "Data Structures & Algorithms";
     final textController = TextEditingController();
     bool isUploading = false;
+    bool isLoadingText = true;
 
     showModalBottomSheet(
       context: context,
@@ -211,6 +212,26 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            void loadGuidelineForSubject(String subject) async {
+              setModalState(() => isLoadingText = true);
+              try {
+                final doc = await _firestore.collection('subject_guidelines').doc(subject).get();
+                if (doc.exists) {
+                  final data = doc.data();
+                  textController.text = data?['textContent'] ?? data?['text'] ?? '';
+                } else {
+                  textController.text = '';
+                }
+              } catch (_) {}
+              if (context.mounted) {
+                setModalState(() => isLoadingText = false);
+              }
+            }
+
+            if (isLoadingText && textController.text.isEmpty) {
+              loadGuidelineForSubject(selectedSubject);
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
@@ -250,19 +271,28 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                       ),
                       items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
                       onChanged: (val) {
-                        if (val != null) setModalState(() => selectedSubject = val);
+                        if (val != null) {
+                          setModalState(() => selectedSubject = val);
+                          loadGuidelineForSubject(val);
+                        }
                       },
                     ),
                     const SizedBox(height: 14),
-                    TextField(
-                      controller: textController,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        labelText: 'Curriculum & Remedial Guidelines Text',
-                        hintText: 'e.g. If student score < 70, require LeetCode Trees & Graphs practice. Midterms carry 40% weight...',
-                        border: OutlineInputBorder(),
+                    if (isLoadingText)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else
+                      TextField(
+                        controller: textController,
+                        maxLines: 5,
+                        decoration: const InputDecoration(
+                          labelText: 'Curriculum & Remedial Guidelines Text',
+                          hintText: 'e.g. If student score < 70, require LeetCode Trees & Graphs practice. Midterms carry 40% weight...',
+                          border: OutlineInputBorder(),
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
@@ -274,7 +304,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                           isUploading ? 'INDEXING GUIDELINES...' : 'INDEX GUIDELINES FOR $selectedSubject',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
-                        onPressed: isUploading
+                        onPressed: isUploading || isLoadingText
                             ? null
                             : () async {
                                 final text = textController.text.trim();
@@ -288,32 +318,33 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                 setModalState(() => isUploading = true);
 
                                 try {
+                                  // 1. Save permanently to Firestore
+                                  await _firestore.collection('subject_guidelines').doc(selectedSubject).set({
+                                    'subject': selectedSubject,
+                                    'textContent': text,
+                                    'text': text,
+                                    'updatedAt': FieldValue.serverTimestamp(),
+                                  }, SetOptions(merge: true));
+
+                                  // 2. Index in Backend RAG
                                   final url = Uri.parse('${BackendService.url}/upload-guidelines/${Uri.encodeComponent(selectedSubject)}');
-                                  final res = await http.post(
+                                  await http.post(
                                     url,
                                     body: {'text_content': text},
                                   ).timeout(const Duration(seconds: 10));
 
                                   if (ctx.mounted) Navigator.of(ctx).pop();
 
-                                  if (res.statusCode == 200) {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Successfully indexed RAG guidelines for $selectedSubject!')),
-                                      );
-                                    }
-                                  } else {
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Upload failed with status ${res.statusCode}')),
-                                      );
-                                    }
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Successfully saved and indexed guidelines for $selectedSubject!')),
+                                    );
                                   }
                                 } catch (e) {
                                   if (ctx.mounted) Navigator.of(ctx).pop();
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Upload notice: $e')),
+                                      SnackBar(content: Text('Saved to Firestore. Backend notice: $e')),
                                     );
                                   }
                                 }
