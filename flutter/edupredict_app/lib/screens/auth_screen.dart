@@ -141,7 +141,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 30,
-                      fontWeight: FontWeight.extrabold,
+                      fontWeight: FontWeight.w800,
                       height: 1.2,
                     ),
                   ),
@@ -199,7 +199,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               text: 'EduPredict ',
                               style: TextStyle(
                                 fontSize: 26,
-                                fontWeight: FontWeight.extrabold,
+                                fontWeight: FontWeight.w800,
                                 color: Color(0xFF0F2B5B),
                               ),
                             ),
@@ -207,7 +207,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               text: 'AI',
                               style: TextStyle(
                                 fontSize: 26,
-                                fontWeight: FontWeight.extrabold,
+                                fontWeight: FontWeight.w800,
                                 color: Color(0xFF2563EB),
                               ),
                             ),
