@@ -17,6 +17,11 @@ env/
 build/
 flutter/*.apk
 
+# Secrets
+serviceAccountKey.json
+backend/serviceAccountKey.json
+*.json.key
+
 # IDE & OS
 .idea/
 .vscode/

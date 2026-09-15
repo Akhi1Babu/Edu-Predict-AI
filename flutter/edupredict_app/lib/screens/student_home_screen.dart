@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -109,9 +110,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
       // 2. Trigger Backend ML Prediction Sync
       final syncUrl = Uri.parse('${BackendService.url}/sync-prediction/${_user.uid}');
-      final response = await http.post(syncUrl).timeout(const Duration(seconds: 5));
+      final response = await http.post(
+        syncUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'subjectRecords': {
+            _selectedSubject: {
+              'studentInputs': studentInputs,
+            }
+          }
+        }),
+      ).timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) {
+      if (response.statusCode == 200) {
+        final resJson = jsonDecode(response.body);
+        final predictionData = resJson['prediction'];
+        if (predictionData != null) {
+          await _firestore.collection('student_records').doc(_user.uid).set({
+            'prediction': predictionData,
+          }, SetOptions(merge: true));
+        }
+      } else {
         throw Exception('Server returned status ${response.statusCode}');
       }
 

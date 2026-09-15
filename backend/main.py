@@ -153,19 +153,24 @@ def predict_exam_score(student: StudentInput):
 
 
 @app.post("/sync-prediction/{student_id}")
-def sync_student_prediction(student_id: str):
+def sync_student_prediction(student_id: str, payload: dict = None):
     if model is None:
         raise HTTPException(status_code=500, detail="ML Model is not loaded.")
-    if db is None:
-        raise HTTPException(status_code=500, detail="Firebase Admin is not connected.")
-        
-    doc_ref = db.collection("student_records").document(student_id)
-    doc = doc_ref.get()
     
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail=f"Student record '{student_id}' not found in Firestore.")
-        
-    data = doc.to_dict()
+    data = {}
+    if db is not None:
+        try:
+            doc_ref = db.collection("student_records").document(student_id)
+            doc = doc_ref.get()
+            if doc.exists:
+                data = doc.to_dict()
+        except Exception as e:
+            print(f"Firestore read error in sync: {e}")
+
+    # Merge with client payload if provided
+    if payload:
+        data = {**data, **payload}
+
     student_inputs = data.get("studentInputs", {})
     teacher_inputs = data.get("teacherInputs", {})
     subject_records = data.get("subjectRecords", {})
@@ -177,8 +182,12 @@ def sync_student_prediction(student_id: str):
         subj_student_inputs = subj_data.get("studentInputs", student_inputs)
         subj_teacher_inputs = subj_data.get("teacherInputs", teacher_inputs)
 
-        full_data = {**DEFAULT_FEATURE_VALUES, **subj_student_inputs, **subj_teacher_inputs}
-        
+        full_data = {**DEFAULT_FEATURE_VALUES, **student_inputs, **teacher_inputs, **subj_student_inputs, **subj_teacher_inputs}
+
+        # Ensure Previous_Scores stays synced with Previous_Scores_Semester_Wise
+        if "Previous_Scores_Semester_Wise" in full_data:
+            full_data["Previous_Scores"] = full_data["Previous_Scores_Semester_Wise"]
+
         feature_vector = np.array([[full_data[feature] for feature in FEATURE_ORDER]])
         score = round(max(0.0, min(100.0, float(model.predict(feature_vector)[0]))), 2)
         recs = generate_recommendations(full_data, score, subject=subj)
@@ -191,17 +200,25 @@ def sync_student_prediction(student_id: str):
             "previousScore": full_data.get("Previous_Scores_Semester_Wise", 75.0)
         }
     
-    # Backwards compatibility primary prediction (using DSA)
     primary_pred = predictions.get("Data Structures & Algorithms", list(predictions.values())[0])
 
     prediction_payload = {
         "predictedExamScore": primary_pred["predictedExamScore"],
         "recommendations": primary_pred["recommendations"],
         "subjectPredictions": predictions,
-        "lastUpdated": firestore.SERVER_TIMESTAMP
     }
     
-    doc_ref.update({"prediction": prediction_payload})
+    if db is not None:
+        try:
+            doc_ref = db.collection("student_records").document(student_id)
+            doc_ref.update({
+                "prediction": {
+                    **prediction_payload,
+                    "lastUpdated": firestore.SERVER_TIMESTAMP
+                }
+            })
+        except Exception as e:
+            print(f"Firestore update error in sync: {e}")
     
     return {
         "status": "success",

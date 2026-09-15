@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -143,8 +144,25 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
 
                             // Trigger Backend Sync
                             try {
-                              final response = await http.post(Uri.parse('${BackendService.url}/sync-prediction/$studentId')).timeout(const Duration(seconds: 5));
+                              final response = await http.post(
+                                Uri.parse('${BackendService.url}/sync-prediction/$studentId'),
+                                headers: {'Content-Type': 'application/json'},
+                                body: jsonEncode({
+                                  'subjectRecords': {
+                                    selectedSubject: {
+                                      'teacherInputs': teacherInputs,
+                                    }
+                                  }
+                                }),
+                              ).timeout(const Duration(seconds: 10));
                               if (response.statusCode == 200) {
+                                final resJson = jsonDecode(response.body);
+                                final predictionData = resJson['prediction'];
+                                if (predictionData != null) {
+                                  await _firestore.collection('student_records').doc(studentId).set({
+                                    'prediction': predictionData,
+                                  }, SetOptions(merge: true));
+                                }
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(content: Text('Updated $selectedSubject record and re-evaluated successfully!')),
