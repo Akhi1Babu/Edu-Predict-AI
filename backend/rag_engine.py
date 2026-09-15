@@ -55,6 +55,9 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
     return chunks if chunks else [text]
 
 
+_CUSTOM_SUBJECTS = set()
+
+
 def initialize_rag():
     """Initializes RAG index with default university curriculum guidelines."""
     global _SUBJECT_CHUNKS
@@ -63,14 +66,15 @@ def initialize_rag():
             _SUBJECT_CHUNKS[subject] = _chunk_text(text)
 
 
-def index_document_text(subject: str, text: str, append: bool = True):
-    """Indexes text content for a subject."""
+def index_document_text(subject: str, text: str, append: bool = False):
+    """Indexes text content for a subject, replacing defaults with teacher's custom guidelines."""
     initialize_rag()
     new_chunks = _chunk_text(text)
     if append and subject in _SUBJECT_CHUNKS:
         _SUBJECT_CHUNKS[subject].extend(new_chunks)
     else:
         _SUBJECT_CHUNKS[subject] = new_chunks
+    _CUSTOM_SUBJECTS.add(subject)
 
 
 def parse_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -89,28 +93,42 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
         return ""
 
 
-def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 2) -> list[str]:
+def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
-    RAG Retriever: Uses TF-IDF & Cosine Similarity to find top university curriculum rules 
-    matching the student's current score and weak areas.
+    RAG Retriever: Uses TF-IDF & Cosine Similarity to find top university curriculum rules.
+    Prioritizes custom teacher guidelines uploaded for the subject.
     """
     initialize_rag()
-    chunks = _SUBJECT_CHUNKS.get(subject, _SUBJECT_CHUNKS.get("Data Structures & Algorithms", []))
+    chunks = _SUBJECT_CHUNKS.get(subject, [])
+    if not chunks:
+        chunks = _SUBJECT_CHUNKS.get("Data Structures & Algorithms", [])
     if not chunks:
         return []
 
-    # Build query from student condition
+    # If teacher uploaded custom guidelines for this subject, return the teacher's guidelines directly
+    if subject in _CUSTOM_SUBJECTS or len(chunks) <= top_k:
+        results = []
+        for c in chunks[:top_k]:
+            clean_chunk = c.strip()
+            if clean_chunk:
+                if clean_chunk.startswith("🎓"):
+                    results.append(clean_chunk)
+                else:
+                    results.append(f"🎓 UNIVERSITY GUIDELINE: {clean_chunk}")
+        return results
+
+    # Fallback to TF-IDF retrieval for multi-chunk documents
     attendance = student_data.get("Attendance", 85.0)
     hours = student_data.get("Hours_Studied", 15.0)
     prev_score = student_data.get("Previous_Scores_Semester_Wise", 75.0)
 
     query_keywords = [subject]
     if predicted_score < 70:
-        query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "exam topics", "failing"])
+        query_keywords.extend(["predicted score below 70%", "score low", "remedial policy", "failing"])
     if attendance < 80:
         query_keywords.extend(["attendance", "missed lab", "remedial tutorial"])
     if hours < 15:
-        query_keywords.extend(["low study hours", "coding exercises", "practice"])
+        query_keywords.extend(["low study hours", "practice", "exercise"])
     if prev_score < 70:
         query_keywords.extend(["fundamentals", "revision"])
 
@@ -126,22 +144,15 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
 
         results = []
         for idx in top_indices:
-            if similarities[idx] > 0.05:  # threshold
-                clean_chunk = chunks[idx].strip()
-                if clean_chunk and not clean_chunk.startswith("🎓"):
-                    results.append(f"🎓 UNIVERSITY GUIDELINE: {clean_chunk}")
+            clean_chunk = chunks[idx].strip()
+            if clean_chunk:
+                prefix = "" if clean_chunk.startswith("🎓") else "🎓 UNIVERSITY GUIDELINE: "
+                results.append(f"{prefix}{clean_chunk}")
 
-        return results
+        return results if results else [f"🎓 UNIVERSITY GUIDELINE: {c.strip()}" for c in chunks[:top_k]]
     except Exception as e:
         print(f"RAG retrieval error: {e}")
-        # Fallback keyword match
-        results = []
-        for c in chunks:
-            if "Policy" in c or "High-yield" in c or "Syllabus" in c:
-                results.append(f"🎓 UNIVERSITY GUIDELINE: {c.strip()}")
-                if len(results) >= top_k:
-                    break
-        return results
+        return [f"🎓 UNIVERSITY GUIDELINE: {c.strip()}" for c in chunks[:top_k]]
 
 
 # Initialize default guidelines on module import

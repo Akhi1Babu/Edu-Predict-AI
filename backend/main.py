@@ -264,7 +264,7 @@ async def upload_subject_guidelines(
     if not content.strip():
         raise HTTPException(status_code=400, detail="No valid text or document content provided.")
 
-    index_document_text(subject, content)
+    index_document_text(subject, content, append=False)
 
     if db is not None:
         try:
