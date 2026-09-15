@@ -408,9 +408,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 12,
+                                  runSpacing: 12,
                                   children: [
                                     Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -473,12 +475,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     children: [
                                       const Icon(Icons.edit_note, color: Color(0xFF154486), size: 24),
                                       const SizedBox(width: 8),
-                                      Text(
-                                        'Study Habits for $_selectedSubject',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF154486),
+                                      Expanded(
+                                        child: Text(
+                                          'Study Habits for $_selectedSubject',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF154486),
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -646,12 +650,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    children: const [
-                                      Icon(Icons.tips_and_updates, color: Color(0xFF1D61E7)),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'AI Recommendations (Curriculum RAG)',
-                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF154486)),
+                                    children: [
+                                      const Icon(Icons.tips_and_updates, color: Color(0xFF1D61E7)),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'AI Recommendations (Curriculum RAG)',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF154486)),
+                                        ),
                                       ),
                                     ],
                                   ),
