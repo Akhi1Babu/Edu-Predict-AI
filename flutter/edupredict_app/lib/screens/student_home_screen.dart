@@ -638,7 +638,79 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                         const SizedBox(height: 16),
 
-
+                        // AI Recommendations Container Card
+                        if (recommendations.isNotEmpty) ...[
+                          Card(
+                            elevation: 8,
+                            shadowColor: Colors.black26,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            color: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.all(22.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.stars_rounded, color: Color(0xFF154486), size: 24),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          '$_selectedSubject Recommendations',
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF154486),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ...recommendations.map(
+                                    (rec) {
+                                      final cleanRec = rec
+                                          .replaceAll('🎓 UNIVERSITY GUIDELINE:', '')
+                                          .replaceAll('🎓', '')
+                                          .replaceAll('DSA FOCUS:', '')
+                                          .replaceAll('AI FOCUS:', '')
+                                          .replaceAll('CLOUD FOCUS:', '')
+                                          .trim();
+                                      return Container(
+                                        margin: const EdgeInsets.only(bottom: 10),
+                                        padding: const EdgeInsets.all(14),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1E3C72).withOpacity(0.06),
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: const Color(0xFF1E3C72).withOpacity(0.15)),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(Icons.check_circle_outline, color: Color(0xFF154486), size: 18),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                cleanRec.isEmpty ? rec : cleanRec,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  height: 1.4,
+                                                  color: Color(0xFF0F2B5B),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
 
                         // Quote Footer
                         Center(
