@@ -155,7 +155,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             children: [
                               // Text Content
                               Expanded(
-                                flex: 6,
+                                flex: 5,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: const [
@@ -163,7 +163,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                       'A Smarter\nTomorrow for\nEvery Learner',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 26,
+                                        fontSize: 24,
                                         fontWeight: FontWeight.w800,
                                         height: 1.15,
                                       ),
@@ -171,35 +171,54 @@ class _AuthScreenState extends State<AuthScreen> {
                                     SizedBox(height: 8),
                                     Text(
                                       'Predict  •  Improve  •  Succeed',
-                                      style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
                               ),
 
-                              // Badges & Tagline
+                              // Student Illustration Image
                               Expanded(
-                                flex: 4,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    const Text(
-                                      'Your Potential\nMatters',
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontStyle: FontStyle.italic,
-                                        fontWeight: FontWeight.w600,
+                                flex: 5,
+                                child: Container(
+                                  height: 135,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: const [
+                                      BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
+                                    ],
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Image.asset(
+                                          'assets/images/student_illustration.jpg',
+                                          height: 135,
+                                          width: double.infinity,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (ctx, err, stack) => Container(
+                                            color: Colors.white24,
+                                            child: const Icon(Icons.school, size: 50, color: Colors.white),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    _buildBadge(Icons.menu_book, 'Learn Better'),
-                                    const SizedBox(height: 6),
-                                    _buildBadge(Icons.track_changes, 'Stay On Track'),
-                                    const SizedBox(height: 6),
-                                    _buildBadge(Icons.bar_chart, 'Achieve More'),
-                                  ],
+                                      Positioned(
+                                        top: 6,
+                                        right: 6,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            _buildBadge(Icons.menu_book, 'Learn Better'),
+                                            const SizedBox(height: 4),
+                                            _buildBadge(Icons.track_changes, 'Stay On Track'),
+                                            const SizedBox(height: 4),
+                                            _buildBadge(Icons.bar_chart, 'Achieve More'),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
