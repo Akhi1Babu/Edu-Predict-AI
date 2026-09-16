@@ -64,9 +64,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                         children: const [
                           Icon(Icons.edit_note, color: Color(0xFF154486), size: 26),
                           SizedBox(width: 8),
-                          Text(
-                            'Update Student Academic Record',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
+                          Expanded(
+                            child: Text(
+                              'Update Student Academic Record',
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
+                            ),
                           ),
                         ],
                       ),
@@ -203,9 +205,12 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                               }
                             }
                           },
-                          child: Text(
-                            'UPDATE $selectedSubject & RE-EVALUATE',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              'UPDATE $selectedSubject & RE-EVALUATE',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
                           ),
                         ),
                       ),
@@ -325,9 +330,12 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
                         icon: const Icon(Icons.cloud_upload_outlined, color: Colors.amber, size: 20),
-                        label: Text(
-                          isUploading ? 'INDEXING GUIDELINES...' : 'INDEX GUIDELINES FOR $selectedSubject',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            isUploading ? 'INDEXING GUIDELINES...' : 'INDEX GUIDELINES FOR $selectedSubject',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
                         ),
                         onPressed: isUploading || isLoadingText
                             ? null
@@ -391,12 +399,17 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF15366D),
       appBar: AppBar(
-        title: Row(
-          children: const [
-            Icon(Icons.school, size: 24, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Teacher Portal - Roster', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.school, size: 22, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Teacher Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
         ),
         backgroundColor: const Color(0xFF15366D),
         elevation: 0,
@@ -463,15 +476,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                 String statusText = 'Not Evaluated';
 
                 if (score != null) {
+                  final formattedScore = score.toStringAsFixed(1);
                   if (score < 70) {
                     statusColor = Colors.red;
-                    statusText = 'At Risk ($score%)';
+                    statusText = 'At Risk ($formattedScore%)';
                   } else if (score < 85) {
                     statusColor = Colors.amber.shade800;
-                    statusText = 'Moderate ($score%)';
+                    statusText = 'Moderate ($formattedScore%)';
                   } else {
                     statusColor = Colors.green;
-                    statusText = 'On Track ($score%)';
+                    statusText = 'On Track ($formattedScore%)';
                   }
                 }
 
@@ -576,10 +590,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     if (s != null) {
       col = s < 70 ? Colors.red : s < 85 ? Colors.amber.shade800 : Colors.green;
     }
-    return Flexible(
+    return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
         decoration: BoxDecoration(
           color: col.withOpacity(0.12),
           borderRadius: BorderRadius.circular(10),
@@ -588,7 +602,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '$label: ${s != null ? '$s%' : '--'}',
+            '$label: ${s != null ? '${s.toStringAsFixed(1)}%' : '--'}',
             style: TextStyle(color: col, fontWeight: FontWeight.w800, fontSize: 12),
           ),
         ),
