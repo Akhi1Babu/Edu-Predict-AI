@@ -3,7 +3,7 @@ import os
 import joblib
 import numpy as np
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Request
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
@@ -194,6 +194,11 @@ def sync_student_prediction(student_id: str, payload: dict = None):
     # Merge with client payload if provided
     if payload:
         data = {**data, **payload}
+        # If client supplied custom subject guidelines in payload, index them immediately
+        if "subjectGuidelines" in payload:
+            for subj_name, g_text in payload["subjectGuidelines"].items():
+                if g_text and isinstance(g_text, str) and g_text.strip():
+                    index_document_text(subj_name, g_text.strip(), append=False)
 
     student_inputs = data.get("studentInputs", {})
     teacher_inputs = data.get("teacherInputs", {})
@@ -254,29 +259,40 @@ def sync_student_prediction(student_id: str, payload: dict = None):
 @app.post("/upload-guidelines/{subject}")
 async def upload_subject_guidelines(
     subject: str,
-    text_content: str = Form(None),
-    file: UploadFile = File(None)
+    request: Request
 ):
     content = ""
-    if file is not None:
-        file_bytes = await file.read()
-        if file.filename.lower().endswith(".pdf"):
-            content = parse_pdf_bytes(file_bytes)
+    try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+            content = body.get("text_content") or body.get("textContent") or body.get("text") or ""
         else:
-            content = file_bytes.decode("utf-8", errors="ignore")
-    elif text_content:
-        content = text_content
+            body_bytes = await request.body()
+            body_str = body_bytes.decode("utf-8", errors="ignore")
+            import urllib.parse
+            parsed = urllib.parse.parse_qs(body_str)
+            if "text_content" in parsed:
+                content = parsed["text_content"][0]
+            elif "textContent" in parsed:
+                content = parsed["textContent"][0]
+            elif "text" in parsed:
+                content = parsed["text"][0]
+            else:
+                content = body_str
+    except Exception as e:
+        print(f"Error parsing uploaded guidelines: {e}")
 
-    if not content.strip():
+    if not content or not content.strip():
         raise HTTPException(status_code=400, detail="No valid text or document content provided.")
 
-    index_document_text(subject, content, append=False)
+    index_document_text(subject, content.strip(), append=False)
 
     if db is not None:
         try:
             db.collection("subject_guidelines").document(subject).set({
                 "subject": subject,
-                "text": content,
+                "text": content.strip(),
                 "lastUpdated": firestore.SERVER_TIMESTAMP
             }, merge=True)
         except Exception as e:

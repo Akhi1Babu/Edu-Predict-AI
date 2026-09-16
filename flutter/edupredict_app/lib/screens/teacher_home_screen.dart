@@ -166,6 +166,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
 
                             // Trigger Backend Sync
                             try {
+                              final guidelinesDocs = await _firestore.collection('subject_guidelines').get();
+                              final guidelinesMap = <String, String>{};
+                              for (final gDoc in guidelinesDocs.docs) {
+                                final gData = gDoc.data();
+                                final gText = gData['textContent'] ?? gData['text'];
+                                if (gText != null && gText.toString().trim().isNotEmpty) {
+                                  guidelinesMap[gDoc.id] = gText.toString().trim();
+                                }
+                              }
+
                               final response = await http.post(
                                 Uri.parse('${BackendService.url}/sync-prediction/$studentId'),
                                 headers: {'Content-Type': 'application/json'},
@@ -174,9 +184,10 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                     selectedSubject: {
                                       'teacherInputs': teacherInputs,
                                     }
-                                  }
+                                  },
+                                  'subjectGuidelines': guidelinesMap,
                                 }),
-                              ).timeout(const Duration(seconds: 10));
+                              ).timeout(const Duration(seconds: 15));
                               if (response.statusCode == 200) {
                                 final resJson = jsonDecode(response.body);
                                 final predictionData = resJson['prediction'];
@@ -363,8 +374,9 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                   final url = Uri.parse('${BackendService.url}/upload-guidelines/${Uri.encodeComponent(selectedSubject)}');
                                   await http.post(
                                     url,
-                                    body: {'text_content': text},
-                                  ).timeout(const Duration(seconds: 10));
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: jsonEncode({'text_content': text}),
+                                  ).timeout(const Duration(seconds: 15));
 
                                   if (ctx.mounted) Navigator.of(ctx).pop();
 

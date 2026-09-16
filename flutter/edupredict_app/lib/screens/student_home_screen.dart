@@ -109,6 +109,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       }, SetOptions(merge: true));
 
       // 2. Trigger Backend ML Prediction Sync
+      final guidelinesDocs = await _firestore.collection('subject_guidelines').get();
+      final guidelinesMap = <String, String>{};
+      for (final gDoc in guidelinesDocs.docs) {
+        final gData = gDoc.data();
+        final gText = gData['textContent'] ?? gData['text'];
+        if (gText != null && gText.toString().trim().isNotEmpty) {
+          guidelinesMap[gDoc.id] = gText.toString().trim();
+        }
+      }
+
       final syncUrl = Uri.parse('${BackendService.url}/sync-prediction/${_user.uid}');
       final response = await http.post(
         syncUrl,
@@ -118,9 +128,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             _selectedSubject: {
               'studentInputs': studentInputs,
             }
-          }
+          },
+          'subjectGuidelines': guidelinesMap,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final resJson = jsonDecode(response.body);

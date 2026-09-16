@@ -59,7 +59,7 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
         for s in sentences:
             s = s.strip()
             s = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', s).strip()
-            if s and len(s) > 10:
+            if s and len(s) > 3:
                 chunks.append(s)
 
     return chunks if chunks else [text.strip()]
@@ -97,6 +97,7 @@ def index_document_text(subject: str, text: str, append: bool = False):
     else:
         _SUBJECT_CHUNKS[norm_subj] = new_chunks
     _CUSTOM_SUBJECTS.add(norm_subj)
+    print(f"RAG Engine: Indexed {len(new_chunks)} custom chunks for subject '{norm_subj}'.")
 
 
 def parse_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -119,7 +120,7 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
     RAG Retriever: Uses TF-IDF embeddings & Cosine Similarity over curated educational corpus.
-    Dynamically constructs a pedagogical context query from student profile to retrieve top-k matching guidelines.
+    Prioritizes teacher custom uploaded guidelines when available.
     """
     initialize_rag()
     norm_subj = _normalize_subject(subject)
@@ -137,6 +138,12 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     cleaned_chunks = [clean_text(c) for c in chunks if clean_text(c)]
     if not cleaned_chunks:
         return []
+
+    # If teacher uploaded custom guidelines for this subject, prioritize and return them directly
+    if norm_subj in _CUSTOM_SUBJECTS:
+        if len(cleaned_chunks) <= top_k:
+            return cleaned_chunks
+
 
     attendance = float(student_data.get("Attendance", 85.0))
     hours = float(student_data.get("Hours_Studied", 15.0))
