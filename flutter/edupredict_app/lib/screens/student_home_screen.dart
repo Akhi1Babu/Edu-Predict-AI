@@ -206,6 +206,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                 final selectedPred = subjectPredictions[_selectedSubject] as Map<String, dynamic>?;
                 final score = selectedPred?['predictedExamScore'] ?? prediction?['predictedExamScore'];
+                final scoreNum = (score as num?);
                 final recommendations = (selectedPred?['recommendations'] as List<dynamic>?)?.cast<String>() ??
                     (prediction?['recommendations'] as List<dynamic>?)?.cast<String>() ?? [];
 
@@ -388,23 +389,23 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: (score as num? ?? 100) < 70
+                                        color: (scoreNum ?? 100) < 70
                                             ? Colors.red.shade100
-                                            : (score as num? ?? 100) < 85
+                                            : (scoreNum ?? 100) < 85
                                                 ? Colors.amber.shade100
                                                 : Colors.green.shade100,
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        (score as num? ?? 100) < 70
+                                        (scoreNum ?? 100) < 70
                                             ? 'At Risk'
-                                            : (score as num? ?? 100) < 85
+                                            : (scoreNum ?? 100) < 85
                                                 ? 'Moderate'
                                                 : 'On Track',
                                         style: TextStyle(
-                                          color: (score as num? ?? 100) < 70
+                                          color: (scoreNum ?? 100) < 70
                                               ? Colors.red.shade900
-                                              : (score as num? ?? 100) < 85
+                                              : (scoreNum ?? 100) < 85
                                                   ? Colors.amber.shade900
                                                   : Colors.green.shade900,
                                           fontWeight: FontWeight.bold,
@@ -448,7 +449,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (_) => PredictionDashboardScreen(
-                                              score: (score as num?)?.toDouble() ?? 0.0,
+                                              score: scoreNum?.toDouble() ?? 0.0,
                                               recommendations: recommendations,
                                               subjectPredictions: subjectPredictions,
                                             ),
