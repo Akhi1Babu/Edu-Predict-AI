@@ -147,6 +147,36 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
         return ""
 
 
+def is_consistent_with_score(chunk: str, score: float) -> bool:
+    """Ensures recommendations do not logically contradict the student's predicted academic performance level."""
+    lower = chunk.lower()
+    if score >= 75.0:
+        # High scoring students must never receive remedial / low exam performance advice
+        remedial_markers = [
+            'low academic exam',
+            'remedial makeup',
+            'underperforming',
+            'score below 60',
+            'below 60 percent',
+            'predicted to score below 60',
+            'remedial foundation',
+            'severe academic deficit',
+        ]
+        if any(marker in lower for marker in remedial_markers):
+            return False
+    elif score < 60.0:
+        # Low scoring students should not receive advanced honors / competitive advice
+        advanced_markers = [
+            'exceeding 80 percent',
+            'high-performing honors',
+            'advanced honors',
+            'accelerated high-scoring',
+        ]
+        if any(marker in lower for marker in advanced_markers):
+            return False
+    return True
+
+
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
     RAG Retriever: Uses TF-IDF embeddings and Cosine Similarity over curated educational corpus.
@@ -193,14 +223,17 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
     query_parts = []
 
     if predicted_score < 60:
-        query_parts.append("remedial foundation core basics rebuild concept gaps prerequisite tutoring peer study missed exam recovery")
+        query_parts.append("remedial foundation core basics rebuild concept gaps prerequisite tutoring peer study missed exam recovery linear data structures")
+        if attendance < 80:
+            query_parts.append("attendance deficits low academic exam performance mandatory weekly remedial makeup labs practical compliance workbooks catch up")
     elif predicted_score < 75:
         query_parts.append("core fundamentals practice exercises structured revision problem solving exam question banks mock coding")
+        if attendance < 80:
+            query_parts.append("attendance lab practical deficit missed exercises peer tutoring compliance catch up")
     else:
-        query_parts.append("advanced honors complex optimization competitive mastery architectural patterns deep learning hackathons")
-
-    if attendance < 80:
-        query_parts.append("attendance lab practical deficit missed exercises peer tutoring compliance catch up")
+        query_parts.append("advanced honors complex optimization competitive mastery architectural patterns dynamic programming contest")
+        if attendance < 80:
+            query_parts.append("accelerated high-scoring attendance deficits alternative laboratory credits independent capstone peer mentors practical")
 
     if hours < 14:
         query_parts.append("study hours weekly timed sessions dedicated problem sets practice discipline pomodoro sprints")
@@ -234,12 +267,22 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
         top_indices = similarities.argsort()[::-1]
 
         results = []
+        # Pass 1: Filter for valid chunks that do not contradict the student's score
         for idx in top_indices:
             candidate = cleaned_chunks[idx]
-            if candidate not in results and is_valid_recommendation_chunk(candidate):
+            if candidate not in results and is_valid_recommendation_chunk(candidate) and is_consistent_with_score(candidate, predicted_score):
                 results.append(candidate)
             if len(results) >= top_k:
                 break
+
+        # Pass 2: Fallback if needed to reach top_k
+        if len(results) < top_k:
+            for idx in top_indices:
+                candidate = cleaned_chunks[idx]
+                if candidate not in results and is_valid_recommendation_chunk(candidate):
+                    results.append(candidate)
+                if len(results) >= top_k:
+                    break
 
         return results if results else cleaned_chunks[:top_k]
     except Exception as e:
