@@ -70,27 +70,31 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     }
   }
 
-  void _updateFormForSubject(String subject, Map<String, dynamic>? fallbackInputs) {
-    final subjInputs = (_allSubjectRecords[subject]?['studentInputs'] as Map<String, dynamic>?) ?? fallbackInputs;
-    if (subjInputs != null) {
-      setState(() {
-        _hoursStudied = (subjInputs['Hours_Studied'] ?? 15.0).toDouble();
-        _sleepHours = (subjInputs['Sleep_Hours'] ?? 7.0).toDouble();
-        _motivationLevel = subjInputs['Motivation_Level'] ?? 2;
-        _teacherQuality = subjInputs['Teacher_Quality'] ?? 2;
-        _internetAccess = subjInputs['Internet_Access'] ?? 1;
-        _extracurriculars = subjInputs['Extracurricular_Activities'] ?? 1;
-        _physicalActivity = (subjInputs['Physical_Activity'] ?? 3.0).toDouble();
-        _age = (subjInputs['Age'] is int)
-            ? subjInputs['Age']
-            : int.tryParse(subjInputs['Age']?.toString() ?? '20') ?? 20;
-        _accessToResources = subjInputs['Access_to_Resources'] ?? 2;
-        _familyIncome = subjInputs['Family_Income'] ?? 1;
-        _parentalInvolvement = subjInputs['Parental_Involvement'] ?? 2;
-        _learningDisabilities = subjInputs['Learning_Disabilities'] ?? 0;
-        _parentalEducationLevel = subjInputs['Parental_Education_Level'] ?? 2;
-      });
-    }
+  void _updateFormForSubject(String subject, Map<String, dynamic>? fallbackDemographics) {
+    final subjInputs = _allSubjectRecords[subject]?['studentInputs'] as Map<String, dynamic>?;
+    setState(() {
+      // Subject-specific habits (strictly isolated per subject, fallback to baseline default)
+      _hoursStudied = (subjInputs?['Hours_Studied'] ?? 15.0).toDouble();
+      _sleepHours = (subjInputs?['Sleep_Hours'] ?? 7.0).toDouble();
+      _motivationLevel = subjInputs?['Motivation_Level'] ?? 2;
+      _teacherQuality = subjInputs?['Teacher_Quality'] ?? 2;
+      _extracurriculars = subjInputs?['Extracurricular_Activities'] ?? 1;
+      _physicalActivity = (subjInputs?['Physical_Activity'] ?? 3.0).toDouble();
+
+      // Universal Demographics (persist across subjects)
+      final demo = fallbackDemographics ?? subjInputs;
+      if (demo != null) {
+        _internetAccess = demo['Internet_Access'] ?? _internetAccess;
+        _age = (demo['Age'] is int)
+            ? demo['Age']
+            : int.tryParse(demo['Age']?.toString() ?? '20') ?? _age;
+        _accessToResources = demo['Access_to_Resources'] ?? _accessToResources;
+        _familyIncome = demo['Family_Income'] ?? _familyIncome;
+        _parentalInvolvement = demo['Parental_Involvement'] ?? _parentalInvolvement;
+        _learningDisabilities = demo['Learning_Disabilities'] ?? _learningDisabilities;
+        _parentalEducationLevel = demo['Parental_Education_Level'] ?? _parentalEducationLevel;
+      }
+    });
   }
 
   Future<void> _saveStudentHabits() async {
@@ -101,30 +105,44 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final studentInputs = {
+      final studentHabits = {
         'Hours_Studied': _hoursStudied,
         'Sleep_Hours': _sleepHours,
         'Motivation_Level': _motivationLevel,
         'Extracurricular_Activities': _extracurriculars,
-        'Internet_Access': _internetAccess,
         'Physical_Activity': _physicalActivity,
         'Teacher_Quality': _teacherQuality,
+      };
+
+      final demographics = {
         'Age': _age,
         'Access_to_Resources': _accessToResources,
         'Family_Income': _familyIncome,
         'Parental_Involvement': _parentalInvolvement,
         'Learning_Disabilities': _learningDisabilities,
         'Parental_Education_Level': _parentalEducationLevel,
+        'Internet_Access': _internetAccess,
       };
 
-      // 1. Update Firestore subjectRecords & studentInputs
+      final fullStudentInputs = {
+        ...studentHabits,
+        ...demographics,
+      };
+
+      // Keep in-memory cache updated immediately
+      _allSubjectRecords[_selectedSubject] = {
+        ...?_allSubjectRecords[_selectedSubject],
+        'studentInputs': fullStudentInputs,
+      };
+
+      // 1. Update Firestore subjectRecords & demographics
       await _firestore.collection('student_records').doc(_user.uid).set({
         'studentId': _user.uid,
         'studentEmail': _user.email,
-        'studentInputs': studentInputs,
+        'studentInputs': demographics,
         'subjectRecords': {
           _selectedSubject: {
-            'studentInputs': studentInputs,
+            'studentInputs': fullStudentInputs,
           }
         },
         'lastUpdatedByStudent': FieldValue.serverTimestamp(),
@@ -146,9 +164,10 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         syncUrl,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'studentInputs': demographics,
           'subjectRecords': {
             _selectedSubject: {
-              'studentInputs': studentInputs,
+              'studentInputs': fullStudentInputs,
             }
           },
           'subjectGuidelines': guidelinesMap,
@@ -223,6 +242,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               stream: _firestore.collection('student_records').doc(_user.uid).snapshots(),
               builder: (context, snapshot) {
                 final docData = snapshot.data?.data() as Map<String, dynamic>?;
+                if (docData?['subjectRecords'] != null) {
+                  _allSubjectRecords = docData!['subjectRecords'] as Map<String, dynamic>;
+                }
                 final prediction = docData?['prediction'] as Map<String, dynamic>?;
                 final subjectPredictions = (prediction?['subjectPredictions'] as Map<String, dynamic>?) ?? {};
 
@@ -553,6 +575,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Motivation Level Dropdown
                                   DropdownButtonFormField<int>(
+                                    key: ValueKey('mot_$_selectedSubject'),
                                     isExpanded: true,
                                     value: _motivationLevel,
                                     decoration: _buildInputDecoration(
@@ -570,6 +593,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Teacher Quality Dropdown
                                   DropdownButtonFormField<int>(
+                                    key: ValueKey('tq_$_selectedSubject'),
                                     isExpanded: true,
                                     value: _teacherQuality,
                                     decoration: _buildInputDecoration(
@@ -588,6 +612,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Internet Access
                                   DropdownButtonFormField<int>(
+                                    key: ValueKey('net_$_selectedSubject'),
                                     isExpanded: true,
                                     value: _internetAccess,
                                     decoration: _buildInputDecoration(
@@ -604,6 +629,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Extracurriculars
                                   DropdownButtonFormField<int>(
+                                    key: ValueKey('extra_$_selectedSubject'),
                                     isExpanded: true,
                                     value: _extracurriculars,
                                     decoration: _buildInputDecoration(

@@ -226,17 +226,27 @@ def sync_student_prediction(student_id: str, payload: dict = None):
     teacher_inputs = data.get("teacherInputs") or {}
     subject_records = data.get("subjectRecords") or {}
 
+    # Student demographic features apply across all subjects
+    demographic_keys = [
+        "Age", "Gender", "Family_Income", "Parental_Involvement",
+        "Parental_Education_Level", "Learning_Disabilities",
+        "Access_to_Resources", "Internet_Access", "School_Type", "Distance_from_Home"
+    ]
+    demographic_features = {
+        k: student_inputs[k] for k in demographic_keys if k in student_inputs
+    }
+
     predictions = {}
 
     for subj in SUBJECT_LIST:
         subj_data = subject_records.get(subj) or {}
-        subj_student_inputs = subj_data.get("studentInputs") or student_inputs
-        subj_teacher_inputs = subj_data.get("teacherInputs") or teacher_inputs
+        subj_student_inputs = subj_data.get("studentInputs") or {}
+        subj_teacher_inputs = subj_data.get("teacherInputs") or {}
 
+        # Strictly isolated subject data: default baseline + demographics + specific subject inputs
         full_data = {
             **DEFAULT_FEATURE_VALUES,
-            **student_inputs,
-            **teacher_inputs,
+            **demographic_features,
             **subj_student_inputs,
             **subj_teacher_inputs
         }

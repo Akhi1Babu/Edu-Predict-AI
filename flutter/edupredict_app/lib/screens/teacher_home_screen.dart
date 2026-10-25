@@ -27,8 +27,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     String selectedSubject = "Data Structures & Algorithms";
 
     final subjectRecords = (existingDocData?['subjectRecords'] as Map<String, dynamic>?) ?? {};
-    final tInputs = (subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?) ??
-        (existingDocData?['teacherInputs'] as Map<String, dynamic>?);
+    final tInputs = subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?;
 
     double attendance = (tInputs?['Attendance'] ?? 85.0).toDouble();
     double previousScore = (tInputs?['Previous_Scores_Semester_Wise'] ?? 75.0).toDouble();
@@ -85,8 +84,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                           if (val != null) {
                             setModalState(() {
                               selectedSubject = val;
-                              final subjTData = (subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?) ??
-                                  (existingDocData?['teacherInputs'] as Map<String, dynamic>?);
+                              final subjTData = subjectRecords[selectedSubject]?['teacherInputs'] as Map<String, dynamic>?;
                               attendance = (subjTData?['Attendance'] ?? 85.0).toDouble();
                               previousScore = (subjTData?['Previous_Scores_Semester_Wise'] ?? 75.0).toDouble();
                               participation = (subjTData?['Class_Participation_Score'] ?? 8.0).toDouble();
@@ -173,7 +171,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                             };
 
                             await _firestore.collection('student_records').doc(studentId).set({
-                              'teacherInputs': teacherInputs,
                               'subjectRecords': {
                                 selectedSubject: {
                                   'teacherInputs': teacherInputs,
@@ -198,7 +195,6 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                 Uri.parse('${BackendService.url}/sync-prediction/$studentId'),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
-                                  'teacherInputs': teacherInputs,
                                   'subjectRecords': {
                                     selectedSubject: {
                                       'teacherInputs': teacherInputs,
