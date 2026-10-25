@@ -37,6 +37,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
   double _physicalActivity = 3;
   int _teacherQuality = 2; // 0=Low, 1=Medium, 2=High, 3=Excellent
 
+  // Student Demographics & Background
+  int _age = 20;
+  int _accessToResources = 2; // 0=Low, 1=Medium, 2=High
+  int _familyIncome = 1; // 0=Low, 1=Medium, 2=High
+  int _parentalInvolvement = 2; // 0=Low, 1=Medium, 2=High
+  int _learningDisabilities = 0; // 0=No, 1=Yes
+  int _parentalEducationLevel = 2; // 0=High School, 1=College, 2=Postgraduate
+
   Map<String, dynamic> _allSubjectRecords = {};
 
   @override
@@ -73,6 +81,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         _internetAccess = subjInputs['Internet_Access'] ?? 1;
         _extracurriculars = subjInputs['Extracurricular_Activities'] ?? 1;
         _physicalActivity = (subjInputs['Physical_Activity'] ?? 3.0).toDouble();
+        _age = (subjInputs['Age'] is int)
+            ? subjInputs['Age']
+            : int.tryParse(subjInputs['Age']?.toString() ?? '20') ?? 20;
+        _accessToResources = subjInputs['Access_to_Resources'] ?? 2;
+        _familyIncome = subjInputs['Family_Income'] ?? 1;
+        _parentalInvolvement = subjInputs['Parental_Involvement'] ?? 2;
+        _learningDisabilities = subjInputs['Learning_Disabilities'] ?? 0;
+        _parentalEducationLevel = subjInputs['Parental_Education_Level'] ?? 2;
       });
     }
   }
@@ -93,6 +109,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
         'Internet_Access': _internetAccess,
         'Physical_Activity': _physicalActivity,
         'Teacher_Quality': _teacherQuality,
+        'Age': _age,
+        'Access_to_Resources': _accessToResources,
+        'Family_Income': _familyIncome,
+        'Parental_Involvement': _parentalInvolvement,
+        'Learning_Disabilities': _learningDisabilities,
+        'Parental_Education_Level': _parentalEducationLevel,
       };
 
       // 1. Update Firestore subjectRecords & studentInputs
@@ -235,8 +257,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 flex: 6,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
+                                  children: [
+                                    const Text(
                                       'A Smarter\nTomorrow for\nEvery Learner',
                                       style: TextStyle(
                                         color: Colors.white,
@@ -245,10 +267,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                         height: 1.15,
                                       ),
                                     ),
-                                    SizedBox(height: 6),
-                                    Text(
-                                      'Predict  •  Improve  •  Succeed',
-                                      style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                                    const SizedBox(height: 6),
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: const Text(
+                                        'Predict  •  Improve  •  Succeed',
+                                        style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -527,6 +553,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Motivation Level Dropdown
                                   DropdownButtonFormField<int>(
+                                    isExpanded: true,
                                     value: _motivationLevel,
                                     decoration: _buildInputDecoration(
                                       label: 'Motivation Level',
@@ -543,6 +570,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Teacher Quality Dropdown
                                   DropdownButtonFormField<int>(
+                                    isExpanded: true,
                                     value: _teacherQuality,
                                     decoration: _buildInputDecoration(
                                       label: 'Teacher Quality Rating',
@@ -560,6 +588,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Internet Access
                                   DropdownButtonFormField<int>(
+                                    isExpanded: true,
                                     value: _internetAccess,
                                     decoration: _buildInputDecoration(
                                       label: 'Internet Access at Home',
@@ -575,6 +604,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
                                   // Extracurriculars
                                   DropdownButtonFormField<int>(
+                                    isExpanded: true,
                                     value: _extracurriculars,
                                     decoration: _buildInputDecoration(
                                       label: 'Extracurricular Activities',
@@ -602,6 +632,128 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                   ),
                                   const SizedBox(height: 20),
 
+                                  // Background & Demographics Section Header
+                                  Row(
+                                    children: const [
+                                      Icon(Icons.badge_outlined, color: Color(0xFF154486), size: 22),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Background & Demographics',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF154486),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Student Age
+                                  TextFormField(
+                                    key: ValueKey('age_$_selectedSubject'),
+                                    initialValue: _age.toString(),
+                                    decoration: _buildInputDecoration(
+                                      label: 'Student Age (Years)',
+                                      icon: Icons.cake_outlined,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    validator: (val) {
+                                      if (val == null || int.tryParse(val) == null) return 'Enter a valid age';
+                                      final a = int.parse(val);
+                                      if (a < 10 || a > 60) return 'Age should be between 10 and 60';
+                                      return null;
+                                    },
+                                    onSaved: (val) => _age = int.parse(val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Access to Resources Dropdown (Overflow-Protected)
+                                  DropdownButtonFormField<int>(
+                                    isExpanded: true,
+                                    value: _accessToResources,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Access to Educational Resources',
+                                      icon: Icons.menu_book_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Low (Limited Access)', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 1, child: Text('Medium (Standard Access)', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 2, child: Text('High (Comprehensive)', overflow: TextOverflow.ellipsis)),
+                                    ],
+                                    onChanged: (val) => setState(() => _accessToResources = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Family / Parental Income Bracket Dropdown
+                                  DropdownButtonFormField<int>(
+                                    isExpanded: true,
+                                    value: _familyIncome,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Family Income Bracket',
+                                      icon: Icons.account_balance_wallet_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Low Income', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 1, child: Text('Medium Income', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 2, child: Text('High Income', overflow: TextOverflow.ellipsis)),
+                                    ],
+                                    onChanged: (val) => setState(() => _familyIncome = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Parental Involvement Dropdown
+                                  DropdownButtonFormField<int>(
+                                    isExpanded: true,
+                                    value: _parentalInvolvement,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Parental Involvement Level',
+                                      icon: Icons.family_restroom_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Low Involvement', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 1, child: Text('Medium Involvement', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 2, child: Text('High Involvement', overflow: TextOverflow.ellipsis)),
+                                    ],
+                                    onChanged: (val) => setState(() => _parentalInvolvement = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Parental Education Level Dropdown
+                                  DropdownButtonFormField<int>(
+                                    isExpanded: true,
+                                    value: _parentalEducationLevel,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Parental Education Level',
+                                      icon: Icons.school_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('High School', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 1, child: Text('College / Graduate', overflow: TextOverflow.ellipsis)),
+                                      DropdownMenuItem(value: 2, child: Text('Postgraduate / Master+', overflow: TextOverflow.ellipsis)),
+                                    ],
+                                    onChanged: (val) => setState(() => _parentalEducationLevel = val!),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Learning Disabilities Dropdown
+                                  DropdownButtonFormField<int>(
+                                    isExpanded: true,
+                                    value: _learningDisabilities,
+                                    decoration: _buildInputDecoration(
+                                      label: 'Learning Disability Status',
+                                      icon: Icons.accessibility_new_outlined,
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('No')),
+                                      DropdownMenuItem(value: 1, child: Text('Yes')),
+                                    ],
+                                    onChanged: (val) => setState(() => _learningDisabilities = val!),
+                                  ),
+                                  const SizedBox(height: 20),
+
                                   // Submit Save Habits Button
                                   if (_isSaving)
                                     const Center(child: CircularProgressIndicator())
@@ -609,19 +761,31 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     SizedBox(
                                       width: double.infinity,
                                       height: 50,
-                                      child: ElevatedButton.icon(
+                                      child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(0xFF154486),
                                           foregroundColor: Colors.white,
                                           elevation: 4,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                         ),
-                                        icon: const Icon(Icons.save_outlined, size: 20),
-                                        label: Text(
-                                          'SAVE HABITS FOR $_selectedSubject',
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.8),
-                                        ),
                                         onPressed: _saveStudentHabits,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(Icons.save_outlined, size: 20),
+                                            const SizedBox(width: 8),
+                                            Flexible(
+                                              child: FittedBox(
+                                                fit: BoxFit.scaleDown,
+                                                child: Text(
+                                                  'SAVE HABITS FOR $_selectedSubject',
+                                                  maxLines: 1,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.6),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -661,7 +825,30 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 14),
-                                  ...recommendations.map(
+                                  ...() {
+                                    final valid = recommendations.where((r) {
+                                      final t = r.trim();
+                                      if (t.isEmpty) return false;
+                                      final lower = t.toLowerCase();
+                                      if (lower.startsWith('module') ||
+                                          lower.startsWith('chapter') ||
+                                          lower.startsWith('curated') ||
+                                          lower.startsWith('department of') ||
+                                          lower.startsWith('faculty of')) {
+                                        return false;
+                                      }
+                                      if (t.endsWith(':')) return false;
+                                      if (t.toUpperCase() == t && t.length < 120) return false;
+                                      return true;
+                                    }).toList();
+                                    final listToDisplay = valid.isNotEmpty
+                                        ? valid
+                                        : [
+                                            'Establish a structured weekly revision schedule focusing on core conceptual foundations and problem solving.',
+                                            'Review prerequisite module concepts and participate in dedicated faculty tutoring or peer study sessions.',
+                                            'Engage with hands-on practice problems and departmental question banks to reinforce practical proficiency.',
+                                          ];
+                                    return listToDisplay.map(
                                     (rec) {
                                       final cleanRec = rec
                                           .replaceAll('🎓 UNIVERSITY GUIDELINE:', '')
@@ -698,7 +885,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                         ),
                                       );
                                     },
-                                  ),
+                                  ).toList();
+                                }(),
                                 ],
                               ),
                             ),
@@ -759,20 +947,23 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: const Color(0xFF154486)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF154486),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: const Color(0xFF154486)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF154486),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

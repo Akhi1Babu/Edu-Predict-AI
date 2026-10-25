@@ -132,6 +132,24 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                         validator: (val) => val == null || double.tryParse(val) == null ? 'Enter valid score' : null,
                         onSaved: (val) => participation = double.parse(val!),
                       ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        key: ValueKey('tutor_$selectedSubject'),
+                        value: tutoringSessions,
+                        decoration: _buildInputDecoration(
+                          label: 'Tutoring Sessions per Month',
+                          icon: Icons.support_agent_outlined,
+                        ),
+                        items: List.generate(
+                          11,
+                          (idx) => DropdownMenuItem(value: idx, child: Text('$idx sessions/month')),
+                        ),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => tutoringSessions = val);
+                          }
+                        },
+                      ),
                       const SizedBox(height: 18),
                       SizedBox(
                         width: double.infinity,
@@ -180,6 +198,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                 Uri.parse('${BackendService.url}/sync-prediction/$studentId'),
                                 headers: {'Content-Type': 'application/json'},
                                 body: jsonEncode({
+                                  'teacherInputs': teacherInputs,
                                   'subjectRecords': {
                                     selectedSubject: {
                                       'teacherInputs': teacherInputs,

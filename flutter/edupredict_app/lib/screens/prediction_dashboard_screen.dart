@@ -46,12 +46,17 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF15366D),
       appBar: AppBar(
-        title: Row(
-          children: const [
-            Icon(Icons.analytics, size: 24, color: Colors.white),
-            SizedBox(width: 8),
-            Text('AI Performance Insights', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              Icon(Icons.analytics, size: 22, color: Colors.white),
+              SizedBox(width: 8),
+              Text('AI Performance Insights', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
         ),
         backgroundColor: const Color(0xFF15366D),
         elevation: 0,
@@ -89,7 +94,7 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                       onTap: () => setState(() => _selectedSubject = subj),
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                         decoration: BoxDecoration(
                           color: isSelected ? Colors.white : Colors.white.withOpacity(0.18),
                           borderRadius: BorderRadius.circular(16),
@@ -105,21 +110,27 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                               size: 22,
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              subj.contains('Data') ? 'DSA' : subj.contains('Artificial') ? 'AI' : 'Cloud',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? const Color(0xFF154486) : Colors.white,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                subj.contains('Data') ? 'DSA' : subj.contains('Artificial') ? 'AI' : 'Cloud',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? const Color(0xFF154486) : Colors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '$sScore%',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: isSelected ? sCol : Colors.white70,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '$sScore%',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: isSelected ? sCol : Colors.white70,
+                                ),
                               ),
                             ),
                           ],
@@ -148,11 +159,14 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                           Expanded(
                             child: Text(
                               _selectedSubject,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: scoreColor.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(20),
@@ -209,6 +223,8 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                           Expanded(
                             child: Text(
                               '$_selectedSubject Recommendations',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF154486)),
                             ),
                           ),
@@ -221,22 +237,47 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Text('No recommendations generated yet for this subject.', style: TextStyle(color: Colors.grey)),
                         )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: displayRecs.length,
-                          itemBuilder: (ctx, index) {
-                            final rawRec = displayRecs[index];
-                            final rec = rawRec
-                                .replaceAll('🎓 UNIVERSITY GUIDELINE:', '')
-                                .replaceAll('🎓', '')
-                                .replaceAll('DSA FOCUS:', '')
-                                .replaceAll('AI FOCUS:', '')
-                                .replaceAll('CLOUD FOCUS:', '')
-                                .trim();
+                      else ...[
+                        Builder(
+                          builder: (context) {
+                            final validRecs = displayRecs.where((r) {
+                              final t = r.trim();
+                              if (t.isEmpty) return false;
+                              final lower = t.toLowerCase();
+                              if (lower.startsWith('module') ||
+                                  lower.startsWith('chapter') ||
+                                  lower.startsWith('curated') ||
+                                  lower.startsWith('department of') ||
+                                  lower.startsWith('faculty of')) {
+                                return false;
+                              }
+                              if (t.endsWith(':')) return false;
+                              if (t.toUpperCase() == t && t.length < 120) return false;
+                              return true;
+                            }).toList();
+                            final finalRecs = validRecs.isNotEmpty
+                                ? validRecs
+                                : [
+                                    'Establish a structured weekly revision schedule focusing on core conceptual foundations and problem solving.',
+                                    'Review prerequisite module concepts and participate in dedicated faculty tutoring or peer study sessions.',
+                                    'Engage with hands-on practice problems and departmental question banks to reinforce practical proficiency.',
+                                  ];
 
-                            return Container(
+                            return ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: finalRecs.length,
+                              itemBuilder: (ctx, index) {
+                                final rawRec = finalRecs[index];
+                                final rec = rawRec
+                                    .replaceAll('🎓 UNIVERSITY GUIDELINE:', '')
+                                    .replaceAll('🎓', '')
+                                    .replaceAll('DSA FOCUS:', '')
+                                    .replaceAll('AI FOCUS:', '')
+                                    .replaceAll('CLOUD FOCUS:', '')
+                                    .trim();
+
+                                return Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
@@ -264,11 +305,14 @@ class _PredictionDashboardScreenState extends State<PredictionDashboardScreen> {
                               ),
                             );
                           },
-                        ),
-                    ],
-                  ),
-                ),
+                        );
+                      },
+                    ),
+                  ],
+                ],
               ),
+            ),
+          ),
 
               const SizedBox(height: 14),
 

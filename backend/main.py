@@ -34,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Trained Model
+# Load Trained Model & Canonical Preprocessor
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "student_prediction_model.pkl")
 
 try:
@@ -43,6 +43,14 @@ try:
 except Exception as e:
     model = None
     print(f"Error loading model from {MODEL_PATH}: {e}")
+
+try:
+    from preprocessor import EduPredictPreprocessor
+    preprocessor = EduPredictPreprocessor()
+    print("Preprocessor initialized successfully in FastAPI Backend.")
+except Exception as e:
+    preprocessor = None
+    print(f"Preprocessor notice: {e}")
 
 # Initialize Firebase Admin SDK
 db = None
@@ -156,7 +164,10 @@ def predict_exam_score(student: StudentInput):
     load_firestore_guidelines()
     student_dict = student.model_dump()
     subject = student_dict.get("Subject", "Data Structures & Algorithms")
-    feature_vector = np.array([[student_dict[feature] for feature in FEATURE_ORDER]])
+    if preprocessor is not None:
+        feature_vector = preprocessor.transform_single(student_dict, from_api_codes=True)
+    else:
+        feature_vector = np.array([[student_dict[feature] for feature in FEATURE_ORDER]])
     
     predicted_score = float(model.predict(feature_vector)[0])
     predicted_score = round(max(0.0, min(100.0, predicted_score)), 2)
@@ -175,6 +186,17 @@ def predict_exam_score(student: StudentInput):
     }
 
 
+def deep_merge(dict1: dict, dict2: dict) -> dict:
+    """Recursively merges dict2 into dict1 without overwriting nested dictionaries."""
+    result = dict(dict1)
+    for k, v in dict2.items():
+        if k in result and isinstance(result[k], dict) and isinstance(v, dict):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 @app.post("/sync-prediction/{student_id}")
 def sync_student_prediction(student_id: str, payload: dict = None):
     if model is None:
@@ -191,34 +213,50 @@ def sync_student_prediction(student_id: str, payload: dict = None):
         except Exception as e:
             print(f"Firestore read error in sync: {e}")
 
-    # Merge with client payload if provided
+    # Deep-merge with client payload if provided so nested subjectRecords/studentInputs are never overwritten
     if payload:
-        data = {**data, **payload}
+        data = deep_merge(data, payload)
         # If client supplied custom subject guidelines in payload, index them immediately
         if "subjectGuidelines" in payload:
             for subj_name, g_text in payload["subjectGuidelines"].items():
                 if g_text and isinstance(g_text, str) and g_text.strip():
                     index_document_text(subj_name, g_text.strip(), append=False)
 
-    student_inputs = data.get("studentInputs", {})
-    teacher_inputs = data.get("teacherInputs", {})
-    subject_records = data.get("subjectRecords", {})
+    student_inputs = data.get("studentInputs") or {}
+    teacher_inputs = data.get("teacherInputs") or {}
+    subject_records = data.get("subjectRecords") or {}
 
     predictions = {}
 
     for subj in SUBJECT_LIST:
-        subj_data = subject_records.get(subj, {})
-        subj_student_inputs = subj_data.get("studentInputs", student_inputs)
-        subj_teacher_inputs = subj_data.get("teacherInputs", teacher_inputs)
+        subj_data = subject_records.get(subj) or {}
+        subj_student_inputs = subj_data.get("studentInputs") or student_inputs
+        subj_teacher_inputs = subj_data.get("teacherInputs") or teacher_inputs
 
-        full_data = {**DEFAULT_FEATURE_VALUES, **student_inputs, **teacher_inputs, **subj_student_inputs, **subj_teacher_inputs}
+        full_data = {
+            **DEFAULT_FEATURE_VALUES,
+            **student_inputs,
+            **teacher_inputs,
+            **subj_student_inputs,
+            **subj_teacher_inputs
+        }
 
         # Ensure Previous_Scores stays synced with Previous_Scores_Semester_Wise
         if "Previous_Scores_Semester_Wise" in full_data:
             full_data["Previous_Scores"] = full_data["Previous_Scores_Semester_Wise"]
 
-        feature_vector = np.array([[full_data[feature] for feature in FEATURE_ORDER]])
+        if preprocessor is not None:
+            feature_vector = preprocessor.transform_single(full_data, from_api_codes=True)
+        else:
+            feature_vector = np.array([[full_data[feature] for feature in FEATURE_ORDER]])
+        
         score = round(max(0.0, min(100.0, float(model.predict(feature_vector)[0]))), 2)
+        print(f"[ML Prediction] Student={student_id} Subj='{subj}' Predicted={score} | "
+              f"Att={full_data.get('Attendance')} StudyHrs={full_data.get('Hours_Studied')} "
+              f"PrevScore={full_data.get('Previous_Scores_Semester_Wise')} "
+              f"Participation={full_data.get('Class_Participation_Score')} "
+              f"Age={full_data.get('Age')} Resources={full_data.get('Access_to_Resources')} "
+              f"Income={full_data.get('Family_Income')} Disability={full_data.get('Learning_Disabilities')}")
         recs = generate_recommendations(full_data, score, subject=subj)
 
         predictions[subj] = {

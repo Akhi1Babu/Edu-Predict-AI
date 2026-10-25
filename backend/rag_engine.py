@@ -42,8 +42,38 @@ _SUBJECT_CHUNKS = {}
 _CUSTOM_SUBJECTS = set()
 
 
+def is_valid_recommendation_chunk(text: str) -> bool:
+    """Filters out document titles, module/chapter headers, divider lines, and non-actionable metadata."""
+    t = text.strip()
+    if not t:
+        return False
+    # Reject decorative divider lines (e.g. ====, ----, ****)
+    if re.match(r'^[=\-_*#~]{3,}$', t):
+        return False
+    # Reject module, chapter, unit, section, part headings
+    if re.match(r'^(module|chapter|unit|section|part)\s+\d+[\s\:\-]', t, re.IGNORECASE):
+        return False
+    # Reject institutional / departmental syllabus headings
+    if re.match(r'^(department of|faculty of|university of|course code|syllabus|curriculum|academic year)[\s\:\-]', t, re.IGNORECASE):
+        return False
+    # Reject lines containing 'guidelines:' or 'syllabus:' if short
+    if any(k in t.lower() for k in ['guidelines:', 'syllabus:', 'learning outcomes:']) and len(t.split()) <= 14:
+        return False
+    # Reject uppercase headers without sentence endings
+    if t.isupper() and len(t.split()) <= 12 and not t.endswith('.'):
+        return False
+    # Reject lines that end with a colon (e.g. 'MODULE 1:')
+    if t.endswith(':'):
+        return False
+    # Must have reasonable instructional length
+    words = t.split()
+    if len(words) < 5 or len(t) < 25:
+        return False
+    return True
+
+
 def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
-    """Splits document text into clean, individual recommendation sentences."""
+    """Splits document text into clean, individual recommendation sentences, filtering headers and metadata."""
     raw_lines = re.split(r'[\r\n]+', text.strip())
     chunks = []
 
@@ -59,10 +89,10 @@ def _chunk_text(text: str, chunk_size: int = 250) -> list[str]:
         for s in sentences:
             s = s.strip()
             s = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', s).strip()
-            if s and len(s) > 3:
+            if s and is_valid_recommendation_chunk(s):
                 chunks.append(s)
 
-    return chunks if chunks else [text.strip()]
+    return chunks if chunks else [c.strip() for c in raw_lines if is_valid_recommendation_chunk(c)]
 
 
 def _normalize_subject(subject: str) -> str:
@@ -119,8 +149,8 @@ def parse_pdf_bytes(pdf_bytes: bytes) -> str:
 
 def retrieve_university_guidelines(subject: str, student_data: dict, predicted_score: float, top_k: int = 3) -> list[str]:
     """
-    RAG Retriever: Uses TF-IDF embeddings & Cosine Similarity over curated educational corpus.
-    Prioritizes teacher custom uploaded guidelines when available.
+    RAG Retriever: Uses TF-IDF embeddings and Cosine Similarity over curated educational corpus.
+    Prioritizes teacher custom uploaded guidelines when available and filters metadata headers.
     """
     initialize_rag()
     norm_subj = _normalize_subject(subject)
@@ -131,44 +161,63 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
         return []
 
     def clean_text(c: str) -> str:
-        text = c.replace("🎓 UNIVERSITY GUIDELINE:", "").replace("🎓", "").replace("DSA FOCUS:", "").replace("AI FOCUS:", "").replace("CLOUD FOCUS:", "").strip()
+        text = (
+            c.replace("🎓 UNIVERSITY GUIDELINE:", "")
+            .replace("🎓", "")
+            .replace("DSA FOCUS:", "")
+            .replace("AI FOCUS:", "")
+            .replace("CLOUD FOCUS:", "")
+            .strip()
+        )
         text = re.sub(r'^[\s\-\*\•\d\.\)\:]+', '', text).strip()
         return text
 
-    cleaned_chunks = [clean_text(c) for c in chunks if clean_text(c)]
+    cleaned_chunks = [clean_text(c) for c in chunks if is_valid_recommendation_chunk(clean_text(c))]
+    if not cleaned_chunks:
+        cleaned_chunks = [clean_text(c) for c in chunks if clean_text(c)]
     if not cleaned_chunks:
         return []
 
-    # If teacher uploaded custom guidelines for this subject, prioritize and return them directly
-    if norm_subj in _CUSTOM_SUBJECTS:
-        if len(cleaned_chunks) <= top_k:
-            return cleaned_chunks
+    # If teacher uploaded custom guidelines and they are few, return them directly
+    if norm_subj in _CUSTOM_SUBJECTS and len(cleaned_chunks) <= top_k:
+        return cleaned_chunks
 
+    attendance = float(student_data.get("Attendance") or student_data.get("attendance") or 85.0)
+    hours = float(student_data.get("Hours_Studied") or student_data.get("hoursStudied") or 15.0)
+    prev_score = float(student_data.get("Previous_Scores_Semester_Wise") or student_data.get("previousScore") or 75.0)
+    resources = int(student_data.get("Access_to_Resources") if student_data.get("Access_to_Resources") is not None else student_data.get("accessToResources") or 2)
+    disability = int(student_data.get("Learning_Disabilities") if student_data.get("Learning_Disabilities") is not None else student_data.get("learningDisabilities") or 0)
+    income = int(student_data.get("Family_Income") if student_data.get("Family_Income") is not None else student_data.get("familyIncome") or 1)
 
-    attendance = float(student_data.get("Attendance", 85.0))
-    hours = float(student_data.get("Hours_Studied", 15.0))
-    prev_score = float(student_data.get("Previous_Scores_Semester_Wise", 75.0))
-
-    # Construct rich semantic search query representing student's academic standing
-    query_parts = [norm_subj]
+    # Construct rich semantic search query representing student's specific academic deficits
+    query_parts = []
 
     if predicted_score < 60:
-        query_parts.append("remedial foundation core basics rebuild concept gaps prerequisite tutoring peer study missed")
+        query_parts.append("remedial foundation core basics rebuild concept gaps prerequisite tutoring peer study missed exam recovery")
     elif predicted_score < 75:
-        query_parts.append("core fundamentals practice exercises structured revision problem solving exam question banks")
+        query_parts.append("core fundamentals practice exercises structured revision problem solving exam question banks mock coding")
     else:
-        query_parts.append("advanced honors complex optimization competitive mastery architectural patterns deep learning")
+        query_parts.append("advanced honors complex optimization competitive mastery architectural patterns deep learning hackathons")
 
     if attendance < 80:
         query_parts.append("attendance lab practical deficit missed exercises peer tutoring compliance catch up")
 
     if hours < 14:
-        query_parts.append("study hours weekly timed sessions dedicated problem sets practice discipline")
+        query_parts.append("study hours weekly timed sessions dedicated problem sets practice discipline pomodoro sprints")
 
     if prev_score < 70:
-        query_parts.append("prerequisite modules fundamental concepts review previous semester gaps")
+        query_parts.append("prerequisite modules fundamental concepts review previous semester gaps discrete mathematics")
 
-    query_str = " ".join(query_parts)
+    if resources == 0:
+        query_parts.append("limited access resources offline compiler campus library textbook reserves workbooks open lab")
+
+    if disability == 1:
+        query_parts.append("learning disabilities visual algorithm animations pseudo-code breakdowns structured accommodations")
+
+    if income == 0:
+        query_parts.append("free open source fee waived community borrowing")
+
+    query_str = " ".join(query_parts) if query_parts else "core fundamentals practice exercises structured revision problem solving"
 
     try:
         # Full TF-IDF Vectorization with unigram and bigram n-grams and sublinear TF scaling
@@ -187,7 +236,7 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
         results = []
         for idx in top_indices:
             candidate = cleaned_chunks[idx]
-            if candidate not in results:
+            if candidate not in results and is_valid_recommendation_chunk(candidate):
                 results.append(candidate)
             if len(results) >= top_k:
                 break
@@ -198,8 +247,6 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
         return cleaned_chunks[:top_k]
 
 
+
 # Initialize default guidelines on module import
 initialize_rag()
-
-
-
