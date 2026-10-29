@@ -16,7 +16,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 try:
-    import pypdf
+    # pyrefly: ignore [missing-import]
+    import pypdf  # type: ignore
     PYPDF_AVAILABLE = True
 except ImportError:
     PYPDF_AVAILABLE = False
@@ -290,3 +291,4 @@ class VectorStore:
 
 # Singleton instance for app-wide use
 vector_store = VectorStore()
+
