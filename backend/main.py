@@ -3,13 +3,14 @@ import os
 import joblib
 import numpy as np
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Form
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
 # pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field
 from recommendation_engine import generate_recommendations
 from rag_engine import index_document_text, parse_pdf_bytes, _SUBJECT_CHUNKS
+from vector_store import vector_store
 
 # Firebase Admin Imports
 try:
@@ -335,6 +336,7 @@ async def upload_subject_guidelines(
         raise HTTPException(status_code=400, detail="No valid text or document content provided.")
 
     index_document_text(subject, content.strip(), append=False)
+    vector_store.add_document(subject, content.strip(), source_filename="manual_text_entry")
 
     if db is not None:
         try:
@@ -349,7 +351,71 @@ async def upload_subject_guidelines(
     return {
         "status": "success",
         "subject": subject,
-        "message": f"Successfully indexed curriculum guidelines for {subject}."
+        "message": f"Successfully indexed curriculum guidelines for {subject} into Vector Store."
+    }
+
+
+@app.post("/upload-guidelines-pdf")
+async def upload_guidelines_pdf(
+    subject: str = Form("Data Structures & Algorithms"),
+    file: UploadFile = File(...)
+):
+    """
+    RAG Pipeline: PDF Ingestion -> Text Extraction -> Header/Divider Filtering ->
+    Semantic Dense Embeddings -> Persistent Vector Storage.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid file format. Please upload a .pdf document.")
+
+    try:
+        pdf_bytes = await file.read()
+        if not pdf_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded PDF file is empty.")
+
+        # Ingest PDF into Vector Store
+        ingest_result = vector_store.ingest_pdf(
+            subject=subject,
+            pdf_bytes=pdf_bytes,
+            filename=file.filename
+        )
+
+        # Sync with in-memory guidelines cache and Firestore
+        extracted_text = vector_store.parse_pdf(pdf_bytes)
+        index_document_text(subject, extracted_text, append=False)
+
+        if db is not None:
+            try:
+                db.collection("subject_guidelines").document(subject).set({
+                    "subject": subject,
+                    "text": extracted_text.strip(),
+                    "filename": file.filename,
+                    "chunksCount": ingest_result.get("chunks_indexed", 0),
+                    "lastUpdated": firestore.SERVER_TIMESTAMP
+                }, merge=True)
+            except Exception as e:
+                print(f"Firestore PDF guideline save notice: {e}")
+
+        return {
+            "status": "success",
+            "message": f"Successfully ingested and indexed PDF guidelines for '{subject}'.",
+            "ingestion": ingest_result
+        }
+    except Exception as e:
+        print(f"PDF upload processing error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process and index PDF: {str(e)}")
+
+
+@app.get("/vector-store/status")
+def get_vector_store_status():
+    """Returns vector database status, indexing metrics, and list of supported subjects."""
+    indexed_subjects = list(set(d.get("subject") for d in vector_store.documents if d.get("subject")))
+    return {
+        "status": "online",
+        "engine": "Persistent Dense Vector Store & Cosine Similarity",
+        "total_indexed_vectors": len(vector_store.documents),
+        "vocabulary_dimensions": len(vector_store._vocabulary),
+        "indexed_subjects": indexed_subjects,
+        "storage_file": os.path.basename(vector_store.storage_path)
     }
 
 

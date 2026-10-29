@@ -109,12 +109,19 @@ def _normalize_subject(subject: str) -> str:
 
 
 def initialize_rag():
-    """Initializes RAG index with default curriculum recommendations."""
+    """Initializes RAG index with default curriculum recommendations and vector store."""
     global _SUBJECT_CHUNKS
     for subject, text in DEFAULT_SUBJECT_GUIDELINES.items():
         norm_subj = _normalize_subject(subject)
         if norm_subj not in _SUBJECT_CHUNKS or not _SUBJECT_CHUNKS[norm_subj]:
             _SUBJECT_CHUNKS[norm_subj] = _chunk_text(text)
+    try:
+        from vector_store import vector_store
+        if not vector_store.documents:
+            for s, t in DEFAULT_SUBJECT_GUIDELINES.items():
+                vector_store.add_document(_normalize_subject(s), t, source_filename="default_corpus")
+    except Exception as vs_err:
+        print(f"VectorStore init notice: {vs_err}")
 
 
 def index_document_text(subject: str, text: str, append: bool = False):
@@ -128,6 +135,11 @@ def index_document_text(subject: str, text: str, append: bool = False):
         _SUBJECT_CHUNKS[norm_subj] = new_chunks
     _CUSTOM_SUBJECTS.add(norm_subj)
     print(f"RAG Engine: Indexed {len(new_chunks)} custom chunks for subject '{norm_subj}'.")
+    try:
+        from vector_store import vector_store
+        vector_store.add_document(norm_subj, text, source_filename="text_input")
+    except Exception as vs_err:
+        print(f"VectorStore index notice: {vs_err}")
 
 
 def parse_pdf_bytes(pdf_bytes: bytes) -> str:
@@ -251,6 +263,15 @@ def retrieve_university_guidelines(subject: str, student_data: dict, predicted_s
         query_parts.append("free open source fee waived community borrowing")
 
     query_str = " ".join(query_parts) if query_parts else "core fundamentals practice exercises structured revision problem solving"
+
+    # Query persistent VectorStore first
+    try:
+        from vector_store import vector_store
+        vs_results = vector_store.search(norm_subj, query_str, predicted_score=predicted_score, top_k=top_k)
+        if vs_results and len(vs_results) >= top_k:
+            return vs_results
+    except Exception as vs_err:
+        print(f"VectorStore search fallback notice: {vs_err}")
 
     try:
         # Full TF-IDF Vectorization with unigram and bigram n-grams and sublinear TF scaling
